@@ -1,6 +1,6 @@
 {
     "id": "./",
-    "name": "K-HTS 패밀리 모의주식 리그",
+    "name": "K-HTS 패밀리 리그",
     "short_name": "K-HTS",
     "description": "실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그",
     "lang": "ko",
@@ -10,7 +10,7 @@
     "display": "standalone",
     "orientation": "any",
     "background_color": "#0b0e14",
-    "theme_color": "#131722",
+    "theme_color": "#0b0e14",
     "categories": ["finance", "games", "education"],
     "icons": [
         {
