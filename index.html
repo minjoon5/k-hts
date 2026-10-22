@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.9">
+    <meta name="app-version" content="1.0.10">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -588,6 +588,7 @@
 
         .min-h-screen {
             min-height: 100vh;
+            min-height: 100dvh;
         }
 
         .w-10 {
@@ -1561,8 +1562,10 @@
                 height: auto;
             }
 
+            /* 100vh 는 모바일·태블릿 브라우저에서 주소창 뒤까지 포함해 아래가 잘리므로 보이는 높이(dvh)를 씁니다. */
             .lg\:h-screen {
                 height: 100vh;
+                height: 100dvh;
             }
 
             .lg\:min-h-0 {
