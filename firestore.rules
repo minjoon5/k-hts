@@ -64,15 +64,16 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // 업데이트 알림은 관리자만 보낼 수 있습니다.
     match /system/config {
       allow read: if true;
 
-      allow create: if signedIn()
+      allow create: if isAdmin()
         && request.resource.data.version == 2
         && request.resource.data.note is string
         && request.resource.data.note.size() <= 100;
 
-      allow update: if signedIn()
+      allow update: if isAdmin()
         && request.resource.data.version == resource.data.version + 1
         && request.resource.data.note is string
         && request.resource.data.note.size() <= 100;
