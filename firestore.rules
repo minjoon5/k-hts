@@ -14,29 +14,74 @@ service cloud.firestore {
         && request.auth.token.email_verified == true;
     }
 
-    function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
+    function validNickname(n) {
+      return n is string && n.size() >= 1 && n.size() <= 20;
+    }
+
+    match /nicknames/{name} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && !exists(/databases/$(database)/documents/accounts/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.nickname == name;
+
+      allow update: if false;
+
+      // 관리자가 계좌를 삭제할 때 닉네임도 함께 지웁니다.
+      allow delete: if isAdmin();
     }
 
     match /accounts/{uid} {
       allow read: if true;
-      allow create: if isOwner(uid);
-      // 본인 거래 또는 관리자 초기화
-      allow update: if isOwner(uid) || isAdmin();
-      // 관리자만 계좌 삭제
-      allow delete: if isAdmin();
-    }
 
-    match /nicknames/{nickname} {
-      allow read: if true;
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
-      // 관리자가 계좌를 삭제할 때 닉네임도 함께 지웁니다.
-      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nickname', 'cash', 'holdings', 'createdAt', 'updatedAt'])
+        && validNickname(request.resource.data.nickname)
+        && request.resource.data.cash == 50000000
+        && request.resource.data.holdings is map
+        && request.resource.data.holdings.size() == 0
+        && getAfter(/databases/$(database)/documents/nicknames/$(request.resource.data.nickname)).data.uid == uid;
+
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'updatedAt'])
+        && request.resource.data.cash is number
+        && request.resource.data.cash >= 0
+        && request.resource.data.holdings is map
+        && request.resource.data.holdings.keys().hasOnly(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
+
+      // 관리자 초기화: 현금 5,000만 원, 보유 주식 없음으로만 되돌릴 수 있습니다.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'updatedAt'])
+        && request.resource.data.cash == 50000000
+        && request.resource.data.holdings is map
+        && request.resource.data.holdings.size() == 0;
+
+      // 관리자 삭제
+      allow delete: if isAdmin();
     }
 
     match /system/config {
       allow read: if true;
-      allow write: if isAdmin();
+
+      allow create: if signedIn()
+        && request.resource.data.version == 2
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 100;
+
+      allow update: if signedIn()
+        && request.resource.data.version == resource.data.version + 1
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 100;
+
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
