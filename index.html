@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.10">
+    <meta name="app-version" content="1.0.11">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -1672,6 +1672,10 @@
             --bg: 11, 14, 20;
         }
 
+        .fade-bg-trade {
+            --bg: 7, 9, 14;
+        }
+
         .fade-edge,
         .page-fade {
             position: absolute;
@@ -1960,9 +1964,11 @@
 </main>
 </div>
 
+<div id="tradeScreen" class="hidden scroll-fade fade-bg-trade flex-1 min-h-0 flex flex-col" data-fade="y">
 <main
-    id="tradeScreen"
-    class="hidden flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 p-2.5 bg-[#07090e] lg:overflow-y-auto lg:min-h-0"
+    id="tradeScroll"
+    data-fade-scroller
+    class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 p-2.5 bg-[#07090e] lg:overflow-y-auto lg:min-h-0"
 >
 
     <section
@@ -2196,6 +2202,7 @@
         </div>
     </section>
 </main>
+</div>
 
 <div id="profileModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4">
     <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
