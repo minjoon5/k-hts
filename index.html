@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.8">
+    <meta name="app-version" content="1.0.9">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -1731,7 +1731,50 @@
             --fade-size: 40px;
         }
 
+        .toggle-switch {
+            appearance: none;
+            position: relative;
+            width: 2.75rem;
+            height: 1.5rem;
+            border-radius: 9999px;
+            background-color: #334155;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 0.125rem;
+            left: 0.125rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 9999px;
+            background-color: #fff;
+            transition: transform 0.2s ease;
+        }
+
+        .toggle-switch:checked {
+            background-color: #f59e0b;
+        }
+
+        .toggle-switch:checked::after {
+            transform: translateX(1.25rem);
+        }
+
+        .toggle-switch:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .toggle-switch:focus-visible {
+            outline: 2px solid #fbbf24;
+            outline-offset: 2px;
+        }
+
         @media (prefers-reduced-motion: reduce) {
+            .toggle-switch,
+            .toggle-switch::after,
             .fade-edge,
             .page-fade {
                 transition: none;
@@ -2220,6 +2263,21 @@
             </button>
         </section>
 
+        <section class="flex items-center justify-between gap-3 bg-[#0b0e14] border border-slate-800 rounded-xl p-4">
+            <div>
+                <h4 class="text-sm font-extrabold text-white">관리자 계좌 순위 숨기기</h4>
+                <p class="text-xs text-slate-400 mt-0.5">켜면 모든 참가자의 리더보드에서 관리자 계좌가 빠지고 순위가 다시 매겨집니다.</p>
+            </div>
+            <input
+                type="checkbox"
+                id="hideAdminToggle"
+                role="switch"
+                aria-label="관리자 계좌 순위 숨기기"
+                onchange="toggleHideAdminFromRanking(this.checked)"
+                class="toggle-switch shrink-0"
+            >
+        </section>
+
         <section class="flex flex-col gap-2 min-h-0">
             <div>
                 <h4 class="text-sm font-extrabold text-white">
@@ -2641,6 +2699,7 @@
     let loginBusy = false;
     let profileBusy = false;
     let adminBusy = false;
+    let rankingSettings = { hideAdmin: false, adminUid: null };
     let authUser = null;
     let profileNeeded = false;
 
@@ -2893,8 +2952,9 @@
         const app = appSdk.initializeApp(config);
         const auth = authSdk.getAuth(app);
         const db = fsSdk.getFirestore(app);
-        const { doc, collection, onSnapshot, runTransaction, getDoc } = fsSdk;
+        const { doc, collection, onSnapshot, runTransaction, getDoc, setDoc } = fsSdk;
         const configRef = doc(db, 'system', 'config');
+        const settingsRef = doc(db, 'system', 'settings');
 
         const accountRef = uid => doc(db, 'accounts', uid);
 
@@ -2922,6 +2982,15 @@
             const data = snap.exists() ? snap.data() : {};
             handleRemoteVersion(Number(data.version) || 1, data.note);
         }, err => console.error('Config sync error:', err));
+
+        onSnapshot(settingsRef, snap => {
+            const data = snap.exists() ? snap.data() : {};
+            rankingSettings = {
+                hideAdmin: data.hideAdminFromRanking === true,
+                adminUid: typeof data.adminUid === 'string' ? data.adminUid : null
+            };
+            onAccountsChanged();
+        }, err => console.error('Settings sync error:', err));
 
         authSdk.onAuthStateChanged(auth, async user => {
             authUser = user
@@ -3009,6 +3078,11 @@
                     if (!snap.exists()) throw new Error('이미 삭제된 계좌입니다.');
                     tx.update(ref, { cash: INITIAL_CASH, holdings: {}, updatedAt: Date.now() });
                 });
+            },
+            async setHideAdminFromRanking(hide) {
+                const uid = auth.currentUser && auth.currentUser.uid;
+                if (!uid) throw new Error('로그인이 필요합니다.');
+                await setDoc(settingsRef, { hideAdminFromRanking: hide, adminUid: uid, updatedAt: Date.now() });
             },
             async adminDeleteAccount(uid) {
                 await runTransaction(db, async tx => {
@@ -3177,7 +3251,8 @@
 
     function renderLeaderboard() {
         const tbody = document.getElementById('leaderboardTableBody');
-        const list = Object.values(accounts).map(acc => {
+        const hiddenId = rankingSettings.hideAdmin ? rankingSettings.adminUid : null;
+        const list = Object.values(accounts).filter(acc => acc.id !== hiddenId).map(acc => {
             const { cash, stockEval, total } = getAccountTotalValue(acc);
             const rate = ((total - INITIAL_CASH) / INITIAL_CASH) * 100;
             return { id: acc.id, nickname: acc.nickname, cash, stockEval, total, rate };
@@ -3903,6 +3978,9 @@
 
     function renderAdminPanel() {
         if (!isAdminModalOpen()) return;
+        const hideToggle = document.getElementById('hideAdminToggle');
+        hideToggle.checked = rankingSettings.hideAdmin;
+        hideToggle.disabled = adminBusy;
         const tbody = document.getElementById('adminAccountRows');
         const list = Object.values(accounts)
             .map(acc => ({ ...acc, total: getAccountTotalValue(acc).total }))
@@ -3954,6 +4032,27 @@
             return tr;
         }));
     }
+
+    window.toggleHideAdminFromRanking = async function(hide) {
+        if (adminBusy || !backend || !isAdmin()) {
+            renderAdminPanel();
+            return;
+        }
+        adminBusy = true;
+        renderAdminPanel();
+        try {
+            await backend.setHideAdminFromRanking(hide);
+            showToast(hide ? '관리자 계좌를 순위에서 숨겼습니다.' : '관리자 계좌를 순위에 다시 표시합니다.', 'info');
+        } catch (err) {
+            const msg = err && err.code === 'permission-denied'
+                ? 'Firestore 보안 규칙이 관리자 권한을 허용하지 않습니다. 저장소의 firestore.rules 를 Firebase 콘솔 규칙에 게시해 주세요.'
+                : describeError(err);
+            showToast(msg, 'error');
+        } finally {
+            adminBusy = false;
+            renderAdminPanel();
+        }
+    };
 
     async function handleAdminAction(action, accountId) {
         if (adminBusy || !backend || !isAdmin()) return;
