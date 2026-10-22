@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-HTS 패밀리 모의주식 리그</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background-color: #0b0e14;
+            color: #e2e8f0;
+        }
+        button { user-select: none; }
+        .kr-up { color: #f04452 !important; }
+        .kr-down { color: #3182f6 !important; }
+        .kr-flat { color: #94a3b8 !important; }
+
+    .bg-kr-up { background-color: #f04452; }
+    .bg-kr-down { background-color: #3182f6; }
+
+    .bg-kr-up-soft { background-color: rgba(240, 68, 82, 0.12); }
+    .bg-kr-down-soft { background-color: rgba(49, 130, 246, 0.12); }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+</style>
+</head>
+<body class="min-h-screen flex flex-col lg:h-screen lg:overflow-hidden">
+
+<div id="updateBanner" class="hidden bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-slate-950 px-4 py-2.5 font-extrabold text-xs sm:text-sm items-center justify-between shadow-lg z-50 shrink-0">
+    <div class="flex items-center gap-2">
+        <i class="fa-solid fa-rocket text-lg animate-bounce"></i>
+        <span>🚀 새로운 프로그램 버전(<span id="newVerText">v2</span>) 업데이트가 배포되었습니다! 최신 기능을 적용하려면 새로고침하세요.</span>
+    </div>
+    <button onclick="applySystemUpdate()" class="bg-slate-950 hover:bg-slate-800 text-amber-300 px-3.5 py-1.5 rounded-lg text-xs font-bold shadow transition shrink-0">
+        확인 및 새로고침
+    </button>
+</div>
+
+<header class="bg-[#131722] border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+    <div class="flex items-center gap-3">
+        <button id="backLobbyBtn" onclick="switchScreen('LOBBY')" class="hidden bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-2 rounded-lg border border-slate-700 transition items-center gap-1.5">
+            <i class="fa-solid fa-chevron-left"></i> 기업 선택·순위표로
+        </button>
+
+        <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchScreen('LOBBY')">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-blue-600 flex items-center justify-center shadow">
+                <i class="fa-solid fa-chart-simple text-white text-sm"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-extrabold text-base sm:text-lg text-white tracking-tight">K-HTS 패밀리 리그</h1>
+                    <span id="sysVerBadge" class="text-[11px] bg-slate-800 text-amber-400 px-2 py-0.5 rounded border border-slate-700 font-mono">v1</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-3 bg-[#0b0e14] px-3.5 py-1.5 rounded-xl border border-slate-800 text-xs">
+        <div class="flex items-center gap-1.5">
+            <span id="marketDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="marketStatusLabel" class="font-bold text-emerald-400">장중 (06:00~24:00)</span>
+        </div>
+        <span class="text-slate-700">|</span>
+        <span id="clockDisplay" class="font-mono text-slate-300 font-semibold">00:00:00</span>
+        <span class="text-[10px] text-slate-500 font-bold">KST</span>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <div id="loggedInUserBox" class="hidden items-center gap-2 bg-[#0b0e14] px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+            <i class="fa-solid fa-user-astronaut text-blue-400"></i>
+            <span id="navUserName" class="font-bold text-white">게스트</span>
+            <span id="navUserAsset" class="text-amber-400 font-bold ml-1">50,000,000원</span>
+            <button onclick="switchGoogleAccount()" class="ml-2 text-[11px] text-slate-400 hover:text-white underline">계정전환</button>
+            <button onclick="logoutAccount()" class="text-[11px] text-slate-400 hover:text-white underline">로그아웃</button>
+        </div>
+        <button id="loginOpenBtn" onclick="handleLoginButton()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition">
+            <i class="fa-brands fa-google mr-1"></i> <span id="loginOpenText">Google 로그인</span>
+        </button>
+        <button onclick="openBroadcastModal()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5" title="코드를 수정한 뒤 다른 가족들의 화면에 새로고침 배너를 띄웁니다">
+            <i class="fa-solid fa-bullhorn"></i>
+            <span class="hidden md:inline">업데이트 배포</span>
+        </button>
+    </div>
+</header>
+
+<main id="lobbyScreen" class="flex-1 overflow-y-auto p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+
+    <section class="bg-[#131722] border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div>
+                <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-amber-400"></i> 실시간 수익률 랭킹 리더보드
+                </h2>
+                <p id="leaderboardSubtitle" class="text-xs text-slate-400 mt-0.5">초기자금 5,000만 원 기준</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+                <span id="dbSyncBadge" class="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-slate-800">
+                    <span id="dbSyncDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="dbSyncText">연결 중</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                    <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
+                        <th class="py-2.5 px-3 font-bold w-16">순위</th>
+                        <th class="py-2.5 px-3 font-bold">참가자 (닉네임)</th>
+                        <th class="py-2.5 px-3 font-bold text-right">총 평가자산</th>
+                        <th class="py-2.5 px-3 font-bold text-right">보유 현금</th>
+                        <th class="py-2.5 px-3 font-bold text-right">주식 평가금</th>
+                        <th class="py-2.5 px-3 font-bold text-right">누적 수익률</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardTableBody" class="divide-y divide-slate-800/60">
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="space-y-3">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-building text-blue-400"></i> 상장 10대 기업 선택 (클릭 시 거래화면 이동)
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">상장 기준가 대비 상한가(+50%) · 하한가(-50%) 제한 · 모든 참가자에게 같은 시세가 표시됩니다</p>
+            </div>
+        </div>
+
+        <div id="companyGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        </div>
+    </section>
+</main>
+
+<main id="tradeScreen" class="hidden flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 p-2.5 bg-[#07090e] lg:overflow-hidden lg:min-h-0">
+
+    <section class="lg:col-span-7 bg-[#131722] rounded-xl border border-slate-800 flex flex-col overflow-hidden min-h-[400px]">
+        <div class="p-3.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span id="trCodeBadge" class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded">A0001</span>
+                    <h2 id="trStockTitle" class="text-xl font-black text-white">에이아이반도체</h2>
+                    <span id="trSectorBadge" class="text-xs bg-blue-950/80 text-blue-300 border border-blue-800/50 px-2 py-0.5 rounded-full">반도체·AI</span>
+                    <span id="trLimitBadge" class="hidden text-xs font-extrabold px-2 py-0.5 rounded">상한가</span>
+                </div>
+                <p id="trStockDesc" class="text-xs text-slate-400 mt-1">차세대 신경망 처리장치(NPU) 및 초고속 HBM 메모리 글로벌 리더</p>
+            </div>
+
+            <div class="text-right">
+                <div id="trCurrentPrice" class="text-2xl font-black kr-up">70,000원</div>
+                <div id="trPriceChange" class="text-xs font-bold kr-up">▲ 0 (+0.00%)</div>
+            </div>
+        </div>
+
+        <div class="bg-[#0b0e14] px-3.5 py-2 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-3">
+                <span><span class="text-slate-400">기준가:</span> <strong id="trBasePrice" class="text-slate-200">70,000</strong></span>
+                <span><span class="text-slate-400">상한가(+50%):</span> <strong id="trUpperLimit" class="kr-up">105,000</strong></span>
+                <span><span class="text-slate-400">하한가(-50%):</span> <strong id="trLowerLimit" class="kr-down">35,000</strong></span>
+            </div>
+
+            <div class="flex items-center gap-1 bg-[#131722] p-1 rounded-lg border border-slate-800">
+                <button onclick="selectTimeframe('5m')" id="tfBtn_5m" class="px-2.5 py-1 rounded text-xs font-bold bg-blue-600 text-white transition">5분봉</button>
+                <button onclick="selectTimeframe('15m')" id="tfBtn_15m" class="px-2.5 py-1 rounded text-xs font-bold text-slate-400 hover:text-white transition">15분봉</button>
+                <button onclick="selectTimeframe('30m')" id="tfBtn_30m" class="px-2.5 py-1 rounded text-xs font-bold text-slate-400 hover:text-white transition">30분봉</button>
+                <button onclick="selectTimeframe('1d')" id="tfBtn_1d" class="px-2.5 py-1 rounded text-xs font-bold text-slate-400 hover:text-white transition">일봉</button>
+                <button onclick="selectTimeframe('1w')" id="tfBtn_1w" class="px-2.5 py-1 rounded text-xs font-bold text-slate-400 hover:text-white transition">주봉</button>
+                <button onclick="selectTimeframe('1M')" id="tfBtn_1M" class="px-2.5 py-1 rounded text-xs font-bold text-slate-400 hover:text-white transition">월봉</button>
+            </div>
+        </div>
+
+        <div id="chartContainer" class="relative flex-1 min-h-[320px] bg-[#0b0e14] w-full overflow-hidden">
+            <canvas id="stockCandleCanvas" class="absolute inset-0 w-full h-full block"></canvas>
+        </div>
+    </section>
+
+    <section class="lg:col-span-2 bg-[#131722] rounded-xl border border-slate-800 flex flex-col overflow-hidden h-[460px] lg:h-auto">
+        <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+            <span class="font-extrabold text-xs text-white">호가창</span>
+            <span class="text-[11px] text-slate-400">클릭 시 단가입력</span>
+        </div>
+        <div class="grid grid-cols-3 bg-[#0b0e14] py-1.5 px-2 text-[11px] font-bold text-slate-400 border-b border-slate-800 text-center">
+            <div>매도잔량</div>
+            <div>호가</div>
+            <div>매수잔량</div>
+        </div>
+        <div id="orderBookRows" class="flex-1 flex flex-col justify-between divide-y divide-slate-800/40 text-xs overflow-y-auto">
+        </div>
+    </section>
+
+    <section class="lg:col-span-3 bg-[#131722] rounded-xl border border-slate-800 flex flex-col justify-between p-4">
+        <div class="space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <span class="font-extrabold text-sm text-white">주문창</span>
+                <span id="orderUserBadge" class="text-xs font-bold text-blue-400">접속자: 로그인 필요</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 bg-[#0b0e14] p-1 rounded-xl border border-slate-800">
+                <button onclick="setTradeSide('BUY')" id="sideBtnBuy" class="py-2.5 rounded-lg font-extrabold text-xs bg-kr-up text-white transition">매수 (Buy)</button>
+                <button onclick="setTradeSide('SELL')" id="sideBtnSell" class="py-2.5 rounded-lg font-extrabold text-xs text-slate-400 hover:text-white transition">매도 (Sell)</button>
+            </div>
+
+            <div class="space-y-1.5 text-xs">
+                <div class="flex justify-between text-slate-400 font-semibold">
+                    <span>주문 단가 (원)</span>
+                    <button onclick="resetPriceToCurrent()" class="text-blue-400 hover:underline">현재가로 설정</button>
+                </div>
+                <div class="flex items-center">
+                    <button onclick="stepOrderPrice(-1)" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-l-lg border border-slate-700">-</button>
+                    <input type="number" id="inputOrderPrice" oninput="calcOrderTotal()" class="w-full h-10 bg-[#0b0e14] border-y border-slate-700 text-right px-3 font-extrabold text-white text-sm focus:outline-none">
+                    <button onclick="stepOrderPrice(1)" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-r-lg border border-slate-700">+</button>
+                </div>
+                <p class="text-[11px] text-slate-500">매수는 현재가 이상, 매도는 현재가 이하로 입력하면 현재가로 즉시 체결됩니다.</p>
+            </div>
+
+            <div class="space-y-1.5 text-xs">
+                <div class="flex justify-between text-slate-400 font-semibold">
+                    <span>주문 수량 (주)</span>
+                    <span id="availQtyHint" class="text-slate-300">최대 가능: 0주</span>
+                </div>
+                <div class="flex items-center">
+                    <button onclick="stepOrderQty(-1)" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-l-lg border border-slate-700">-</button>
+                    <input type="number" id="inputOrderQty" value="1" min="1" step="1" oninput="calcOrderTotal()" class="w-full h-10 bg-[#0b0e14] border-y border-slate-700 text-right px-3 font-extrabold text-white text-sm focus:outline-none">
+                    <button onclick="stepOrderQty(1)" class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-r-lg border border-slate-700">+</button>
+                </div>
+                <div class="grid grid-cols-4 gap-1.5 pt-1">
+                    <button onclick="fillQtyByRatio(0.1)" class="py-1.5 bg-[#0b0e14] hover:bg-slate-800 text-slate-300 rounded border border-slate-800 font-bold">10%</button>
+                    <button onclick="fillQtyByRatio(0.25)" class="py-1.5 bg-[#0b0e14] hover:bg-slate-800 text-slate-300 rounded border border-slate-800 font-bold">25%</button>
+                    <button onclick="fillQtyByRatio(0.5)" class="py-1.5 bg-[#0b0e14] hover:bg-slate-800 text-slate-300 rounded border border-slate-800 font-bold">50%</button>
+                    <button onclick="fillQtyByRatio(1.0)" class="py-1.5 bg-[#0b0e14] hover:bg-slate-800 text-amber-400 rounded border border-slate-800 font-bold">최대</button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
+                <span class="text-slate-400 font-semibold">예상 체결금액 (현재가 기준)</span>
+                <span id="orderTotalText" class="text-lg font-black text-white">0원</span>
+            </div>
+        </div>
+
+        <div class="space-y-3 pt-4">
+            <div class="bg-[#0b0e14] p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">주문가능 현금</span>
+                    <span id="myCashText" class="font-bold text-white">0원</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">이 종목 보유수량</span>
+                    <span id="myStockQtyText" class="font-bold text-white">0주</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">내 매수 평단가</span>
+                    <span id="myStockAvgText" class="font-bold text-slate-200">0원</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">이 종목 수익률</span>
+                    <span id="myStockRateText" class="font-extrabold kr-flat">0.00%</span>
+                </div>
+            </div>
+
+            <button onclick="submitTradeOrder()" id="mainOrderBtn" class="w-full py-3.5 rounded-xl bg-kr-up hover:opacity-95 text-white font-black text-sm shadow-lg transition disabled:opacity-50">
+                매수 주문 체결하기
+            </button>
+        </div>
+    </section>
+</main>
+
+<div id="profileModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4">
+    <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-extrabold text-white flex items-center gap-2">
+                <i class="fa-solid fa-id-badge text-blue-400"></i> 리그에서 쓸 닉네임 정하기
+            </h3>
+            <button onclick="closeProfileModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+            리더보드에 표시될 닉네임을 정해 주세요. 닉네임을 정하면 <strong>초기자금 5,000만 원 계좌</strong>가 생성됩니다.<br>
+            한 번 정한 닉네임은 바꿀 수 없어요.
+        </p>
+        <form id="profileForm" class="space-y-3 text-xs">
+            <div>
+                <label for="profileNickname" class="text-slate-400 font-bold block mb-1">닉네임 (최대 10자, 예: 나, 아빠, 홍길동)</label>
+                <input type="text" id="profileNickname" maxlength="10" autocomplete="nickname" placeholder="닉네임 입력" class="w-full bg-[#0b0e14] border border-slate-700 rounded-lg px-3.5 py-2.5 text-white font-bold text-sm focus:outline-none focus:border-blue-500">
+            </div>
+            <button type="submit" id="profileSubmitBtn" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-sm shadow-lg transition disabled:opacity-50">
+                이 닉네임으로 시작하기
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="broadcastModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4">
+    <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                <i class="fa-solid fa-bullhorn text-amber-400"></i> 전체 접속자에게 업데이트 알림 띄우기
+            </h3>
+            <button onclick="closeBroadcastModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+            코드를 개정한 뒤 아래 버튼을 누르면 프로그램 버전 번호가 올라가며, 현재 접속 중인 <strong>다른 참가자의 화면 상단에 즉시 [새로고침 알림 배너]</strong>가 자동으로 뜹니다.
+        </p>
+        <div>
+            <label for="updateNoteInput" class="text-xs text-slate-400 font-bold block mb-1">업데이트 안내 메모 (선택, 최대 100자)</label>
+            <input type="text" id="updateNoteInput" maxlength="100" value="새로운 기능 및 차트 개선이 반영되었습니다!" class="w-full bg-[#0b0e14] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+            <button onclick="closeBroadcastModal()" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs font-bold">취소</button>
+            <button onclick="triggerBroadcastUpdate()" id="broadcastSubmitBtn" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold disabled:opacity-50">지금 업데이트 알림 발송</button>
+        </div>
+    </div>
+</div>
+
+<div id="toastWrap" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
+
+<script type="module">
+    const FIREBASE_CONFIG = {
+        apiKey: 'AIzaSyDt45EcO2VqfCqm0I3vH-akJYEuXAv1zLk',
+        authDomain: 'k-hts-322c7.firebaseapp.com',
+        projectId: 'k-hts-322c7',
+        storageBucket: 'k-hts-322c7.firebasestorage.app',
+        messagingSenderId: '54844759470',
+        appId: '1:54844759470:web:88d3457e80064978187c3f'
+    };
+    const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/11.6.1';
+
+    const INITIAL_CASH = 50000000;
+    const TIMEFRAMES = ['5m', '15m', '30m', '1d', '1w', '1M'];
+    const LAUNCH_DATE = [2026, 10, 22];
+    const SIM_VERSION = 1;
+    const HISTORY_DAYS = 1100;
+    const KST_OFFSET_MS = 9 * 3600 * 1000;
+    const DAY_MS = 86400000;
+    const OPEN_SEC = 6 * 3600;
+    const SESSION_STEPS = 18 * 3600;
+    const BUCKET_STEPS = 300;
+    const CHART_CANDLES = 60;
+    const EPOCH_DAY = Date.UTC(LAUNCH_DATE[0], LAUNCH_DATE[1] - 1, LAUNCH_DATE[2]) / DAY_MS;
+
+    const LS_DAILY = 'khts.daily.v1';
+
+    const COMPANY_META = [
+        { id: 'A', code: 'A0001', name: '에이아이반도체', sector: '반도체·AI', basePrice: 70000, desc: '차세대 신경망 처리장치(NPU) 및 초고속 HBM 메모리 글로벌 리더' },
+        { id: 'B', code: 'B0002', name: '번개배터리', sector: '2차전지', basePrice: 120000, desc: '10분 초급속 충전 전고체 배터리 셀 및 양극재 핵심 특허 보유' },
+        { id: 'C', code: 'C0003', name: '튼튼셀바이오', sector: '바이오·헬스', basePrice: 45000, desc: '면역 항암 신약 글로벌 임상 3상 및 유전자 치료제 선도 기업' },
+        { id: 'D', code: 'D0004', name: '드림모빌리티', sector: '자율주행·모빌리티', basePrice: 85000, desc: '완전 자율주행 로봇택시 및 도심항공교통(UAM) 완성기 제조사' },
+        { id: 'E', code: 'E0005', name: '에브리톡', sector: 'IT·플랫폼', basePrice: 55000, desc: '국민 메신저 생태계 기반 AI 검색·핀테크·커머스 슈퍼앱 플랫폼' },
+        { id: 'F', code: 'F0006', name: '퓨처로보틱스', sector: '로보틱스', basePrice: 32000, desc: '가정용 가사 도우미 휴머노이드 및 스마트팩토리 협동로봇 전문' },
+        { id: 'G', code: 'G0007', name: '글로벌스타엔터', sector: '엔터테인먼트', basePrice: 64000, desc: '빌보드 1위 K-POP 아티스트 IP 및 글로벌 팬덤 플랫폼 운영사' },
+        { id: 'H', code: 'H0008', name: '헤라클레스방산', sector: '우주·방위산업', basePrice: 95000, desc: '초음속 위성 발사체 및 차세대 한국형 첨단 방위체계 종합 기업' },
+        { id: 'I', code: 'I0009', name: '이노그린에너지', sector: '친환경에너지', basePrice: 28000, desc: '고효율 해상풍력 발전 및 그린수소 에너지 플랜트 솔루션 기업' },
+        { id: 'J', code: 'J0010', name: '제일금융지주', sector: '금융·지주', basePrice: 48000, desc: '고배당 주주환원 밸류업을 선도하는 국내 최대 종합 금융그룹' }
+    ];
+
+    const AUTH_ERRORS = {
+        'auth/popup-blocked': '팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용한 뒤 다시 눌러 주세요.',
+        'auth/unauthorized-domain': '이 사이트 주소가 Firebase 승인된 도메인에 등록되어 있지 않습니다.',
+        'auth/operation-not-allowed': 'Firebase 콘솔에서 Google 로그인을 사용 설정해 주세요.',
+        'auth/web-storage-unsupported': '브라우저 설정에서 쿠키와 사이트 데이터 저장을 허용해 주세요.',
+        'auth/too-many-requests': '시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+        'auth/network-request-failed': '네트워크 연결을 확인해 주세요.',
+        'permission-denied': '권한이 없어 저장하지 못했습니다.',
+        'unavailable': '서버에 연결할 수 없습니다. 네트워크를 확인해 주세요.'
+    };
+    const SILENT_AUTH_ERRORS = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
+
+    function getTickSize(price) {
+        if (price < 2000) return 1;
+        if (price < 5000) return 5;
+        if (price < 20000) return 10;
+        if (price < 50000) return 50;
+        if (price < 200000) return 100;
+        if (price < 500000) return 500;
+        return 1000;
+    }
+
+    function alignToTick(price) {
+        const tick = getTickSize(price);
+        return Math.max(tick, Math.round(price / tick) * tick);
+    }
+
+    function nextUp(price) {
+        return price + getTickSize(price);
+    }
+
+    function nextDown(price) {
+        return price - getTickSize(Math.max(1, price - 1));
+    }
+
+    function getPriceLimits(basePrice) {
+        return {
+            upper: alignToTick(basePrice * 1.5),
+            lower: alignToTick(basePrice * 0.5)
+        };
+    }
+
+    function clampToLimits(price, limits) {
+        return Math.min(limits.upper, Math.max(limits.lower, price));
+    }
+
+    function hash3(a, b, c) {
+        let h = Math.imul(a + 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x7f4a7c15, 0xc2b2ae35);
+        h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) ^ Math.imul(c + 0x165667b1, 0x27d4eb2f);
+        h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+        return (h ^ (h >>> 15)) >>> 0;
+    }
+
+    function createRng(seed) {
+        let s = seed >>> 0;
+        return function() {
+            s = (s + 0x6d2b79f5) >>> 0;
+            let t = s;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function dayNumber(ms) {
+        return Math.floor((ms + KST_OFFSET_MS) / DAY_MS);
+    }
+
+    function secondOfDay(ms) {
+        return Math.floor((((ms + KST_OFFSET_MS) % DAY_MS) + DAY_MS) % DAY_MS / 1000);
+    }
+
+    function stepsElapsed(ms) {
+        const sec = secondOfDay(ms);
+        if (sec < OPEN_SEC) return 0;
+        return Math.min(SESSION_STEPS, sec - OPEN_SEC + 1);
+    }
+
+    function isMarketOpen(ms) {
+        return secondOfDay(ms) >= OPEN_SEC;
+    }
+
+    function formatKstTime(ms) {
+        const d = new Date(ms + KST_OFFSET_MS);
+        return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()].map(v => String(v).padStart(2, '0')).join(':');
+    }
+
+    function createSession(idx, limits, day, open) {
+        return {
+            day,
+            rng: createRng(hash3(idx + 1, day, SIM_VERSION)),
+            limits,
+            steps: 0,
+            price: open,
+            candle: { day, open, high: open, low: open, close: open },
+            buckets: []
+        };
+    }
+
+    function advanceSession(s, target, track) {
+        while (s.steps < target) {
+            const before = s.price;
+            const r = s.rng();
+            let p = before;
+            if (r < 0.35) p = nextUp(before);
+            else if (r < 0.70) p = nextDown(before);
+            p = clampToLimits(p, s.limits);
+
+            if (track) {
+                const bi = Math.floor(s.steps / BUCKET_STEPS);
+                let b = s.buckets[s.buckets.length - 1];
+                if (!b || b.index !== bi) {
+                    b = { day: s.day, index: bi, open: before, high: before, low: before, close: before };
+                    s.buckets.push(b);
+                }
+                if (p > b.high) b.high = p;
+                if (p < b.low) b.low = p;
+                b.close = p;
+            }
+
+            const c = s.candle;
+            if (p > c.high) c.high = p;
+            if (p < c.low) c.low = p;
+            c.close = p;
+            s.price = p;
+            s.steps++;
+        }
+    }
+
+    function buildSyntheticHistory(meta, idx, limits) {
+        const rng = createRng(hash3(idx + 1, 0x5eed, SIM_VERSION));
+        const fit = p => clampToLimits(alignToTick(p), limits);
+        const out = [];
+        let close = meta.basePrice;
+        for (let k = 1; k <= HISTORY_DAYS; k++) {
+            const change = (rng() + rng() + rng() - 1.5) * 0.2;
+            const open = fit(close * (1 - change));
+            const top = Math.max(open, close);
+            const bottom = Math.min(open, close);
+            const high = Math.max(top, fit(top * (1 + rng() * 0.06)));
+            const low = Math.min(bottom, fit(bottom * (1 - rng() * 0.06)));
+            out.push({ day: EPOCH_DAY - k, open, high, low, close });
+            close = open;
+        }
+        return out.reverse();
+    }
+
+    function lsGet(key, fallback) {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+
+    function lsSet(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function loadDailyCache() {
+        const raw = lsGet(LS_DAILY, null);
+        if (!raw || raw.version !== SIM_VERSION || raw.epoch !== EPOCH_DAY || typeof raw.stocks !== 'object' || !raw.stocks) {
+            return { version: SIM_VERSION, epoch: EPOCH_DAY, stocks: {} };
+        }
+        return raw;
+    }
+
+    function isValidCachedCandle(e) {
+        return Array.isArray(e) && e.length === 4 && e.every(v => Number.isFinite(v) && v > 0);
+    }
+
+    let stocks = {};
+    let marketDay = null;
+    let accounts = {};
+    let currentAccountId = null;
+    let backend = null;
+    let syncStatus = 'connecting';
+
+    let currentScreen = 'LOBBY';
+    let selectedStockId = 'A';
+    let selectedTimeframe = '5m';
+    let currentTradeSide = 'BUY';
+
+    let localSystemVersion = null;
+    let ownBroadcastVersion = null;
+    let tradeBusy = false;
+    let loginBusy = false;
+    let profileBusy = false;
+    let authUser = null;
+    let profileNeeded = false;
+
+    function buildMarket(nowMs) {
+        const today = dayNumber(nowMs);
+        const cache = loadDailyCache();
+        let cacheDirty = false;
+        const next = {};
+
+        COMPANY_META.forEach((meta, idx) => {
+            const limits = getPriceLimits(meta.basePrice);
+            const daily = buildSyntheticHistory(meta, idx, limits);
+            const cached = Array.isArray(cache.stocks[meta.id]) ? cache.stocks[meta.id] : [];
+            let price = meta.basePrice;
+            let prevBuckets = [];
+
+            for (let d = EPOCH_DAY; d < today; d++) {
+                const k = d - EPOCH_DAY;
+                const needBuckets = d === today - 1;
+                if (!needBuckets && isValidCachedCandle(cached[k])) {
+                    const [open, high, low, close] = cached[k];
+                    daily.push({ day: d, open, high, low, close });
+                    price = close;
+                    continue;
+                }
+                const s = createSession(idx, limits, d, price);
+                advanceSession(s, SESSION_STEPS, needBuckets);
+                daily.push({ ...s.candle });
+                if (!isValidCachedCandle(cached[k])) {
+                    cached[k] = [s.candle.open, s.candle.high, s.candle.low, s.candle.close];
+                    cacheDirty = true;
+                }
+                if (needBuckets) prevBuckets = s.buckets;
+                price = s.candle.close;
+            }
+            cache.stocks[meta.id] = cached;
+
+            const session = createSession(idx, limits, today, price);
+            advanceSession(session, stepsElapsed(nowMs), true);
+
+            next[meta.id] = {
+                ...meta,
+                idx,
+                limits,
+                daily,
+                prevBuckets,
+                session,
+                price: session.price,
+                orderBook: null
+            };
+            refreshOrderBook(next[meta.id], true);
+        });
+
+        if (cacheDirty) lsSet(LS_DAILY, cache);
+        stocks = next;
+        marketDay = today;
+    }
+
+    function refreshOrderBook(st, randomize) {
+        const prev = st.orderBook;
+        const qtyFor = (valid, side, i) => {
+            if (!valid) return 0;
+            if (!randomize && prev && prev[side][i] && prev[side][i].qty > 0) return prev[side][i].qty;
+            return Math.floor(Math.random() * 450) + 40;
+        };
+
+        const askPrices = [];
+        let p = st.price;
+        for (let i = 0; i < 5; i++) {
+            p = nextUp(p);
+            askPrices.unshift(p);
+        }
+        const bidPrices = [];
+        p = st.price;
+        for (let i = 0; i < 5; i++) {
+            p = nextDown(p);
+            bidPrices.push(p);
+        }
+
+        st.orderBook = {
+            asks: askPrices.map((price, i) => {
+                const valid = price <= st.limits.upper;
+                return { price, valid, qty: qtyFor(valid, 'asks', i) };
+            }),
+            bids: bidPrices.map((price, i) => {
+                const valid = price >= st.limits.lower && price > 0;
+                return { price, valid, qty: qtyFor(valid, 'bids', i) };
+            })
+        };
+    }
+
+    function tickMarket() {
+        const now = Date.now();
+        if (dayNumber(now) !== marketDay) {
+            buildMarket(now);
+        } else {
+            const target = stepsElapsed(now);
+            Object.values(stocks).forEach(st => {
+                advanceSession(st.session, target, true);
+                st.price = st.session.price;
+            });
+        }
+        const open = isMarketOpen(now);
+        Object.values(stocks).forEach(st => refreshOrderBook(st, open));
+        updateClockAndMarketStatus(now);
+        refreshAllViews();
+    }
+
+    function aggregateCandles(list, keyFn) {
+        const out = [];
+        let cur = null;
+        let curKey = null;
+        list.forEach(c => {
+            const key = keyFn(c);
+            if (!cur || key !== curKey) {
+                cur = { open: c.open, high: c.high, low: c.low, close: c.close };
+                curKey = key;
+                out.push(cur);
+            } else {
+                if (c.high > cur.high) cur.high = c.high;
+                if (c.low < cur.low) cur.low = c.low;
+                cur.close = c.close;
+            }
+        });
+        return out.slice(-CHART_CANDLES);
+    }
+
+    function getDailyCandles(st) {
+        if (st.session.steps === 0) return st.daily;
+        return st.daily.concat([{ ...st.session.candle }]);
+    }
+
+    function getChartCandles(st, tf) {
+        const intraday = () => st.prevBuckets.concat(st.session.buckets);
+        if (tf === '5m') return intraday().slice(-CHART_CANDLES);
+        if (tf === '15m') return aggregateCandles(intraday(), b => b.day * 1000 + Math.floor(b.index / 3));
+        if (tf === '30m') return aggregateCandles(intraday(), b => b.day * 1000 + Math.floor(b.index / 6));
+        if (tf === '1d') return getDailyCandles(st).slice(-CHART_CANDLES);
+        if (tf === '1w') return aggregateCandles(getDailyCandles(st), c => Math.floor((c.day + 3) / 7));
+        return aggregateCandles(getDailyCandles(st), c => {
+            const d = new Date(c.day * DAY_MS);
+            return d.getUTCFullYear() * 12 + d.getUTCMonth();
+        });
+    }
+
+    function validateNickname(nickname) {
+        if (!nickname) return '닉네임을 입력해 주세요! (예: 나, 아빠)';
+        if ([...nickname].length > 10) return '닉네임은 10자 이하로 입력해 주세요.';
+        if (new TextEncoder().encode(nickname).length > 30) return '닉네임이 너무 깁니다. 이모지 등 특수문자를 줄여 주세요.';
+        if (/[\u0000-\u001f\u007f/]/.test(nickname) || /^\.{1,2}$/.test(nickname) || /^__.*__$/.test(nickname)) {
+            return '닉네임에 사용할 수 없는 문자가 있습니다.';
+        }
+        return null;
+    }
+
+    function detectInAppBrowser() {
+        const ua = navigator.userAgent || '';
+        if (/KAKAOTALK/i.test(ua)) return 'kakao';
+        if (/NAVER\(inapp|Instagram|FBAN|FBAV|Line\/|DaumApps|; wv\)/i.test(ua)) return 'other';
+        return null;
+    }
+
+    function describeError(err) {
+        if (err && err.code && AUTH_ERRORS[err.code]) return AUTH_ERRORS[err.code];
+        if (err && err.code) return `처리 중 오류가 발생했습니다. (${err.code})`;
+        return (err && err.message) || '처리 중 오류가 발생했습니다.';
+    }
+
+    function normalizeHoldings(raw) {
+        let src = raw;
+        if (typeof src === 'string') {
+            try {
+                src = JSON.parse(src);
+            } catch (e) {
+                src = {};
+            }
+        }
+        const out = {};
+        if (!src || typeof src !== 'object') return out;
+        COMPANY_META.forEach(m => {
+            const h = src[m.id];
+            if (!h) return;
+            const qty = Math.floor(Number(h.qty));
+            const avgPrice = Number(h.avgPrice);
+            if (qty > 0 && Number.isFinite(avgPrice) && avgPrice >= 0) {
+                out[m.id] = { qty, avgPrice };
+            }
+        });
+        return out;
+    }
+
+    function normalizeAccount(id, data) {
+        const cash = Number(data && data.cash);
+        return {
+            id,
+            nickname: String((data && data.nickname) || id),
+            cash: Number.isFinite(cash) && cash >= 0 ? cash : 0,
+            holdings: normalizeHoldings(data && data.holdings)
+        };
+    }
+
+    function applyTradeToAccount(acc, side, stockId, qty, price) {
+        const holdings = { ...acc.holdings };
+        const prev = holdings[stockId] || { qty: 0, avgPrice: 0 };
+
+        if (side === 'BUY') {
+            const cost = price * qty;
+            if (acc.cash < cost) throw new Error('주문 가능 현금이 부족합니다!');
+            const newQty = prev.qty + qty;
+            holdings[stockId] = { qty: newQty, avgPrice: (prev.qty * prev.avgPrice + cost) / newQty };
+            return { cash: acc.cash - cost, holdings };
+        }
+
+        if (prev.qty < qty) throw new Error('매도할 보유 주식이 부족합니다!');
+        const left = prev.qty - qty;
+        if (left > 0) holdings[stockId] = { qty: left, avgPrice: prev.avgPrice };
+        else delete holdings[stockId];
+        return { cash: acc.cash + price * qty, holdings };
+    }
+
+    function getCurrentAccount() {
+        return currentAccountId ? accounts[currentAccountId] || null : null;
+    }
+
+    function onAccountsChanged() {
+        refreshAllViews();
+    }
+
+    function handleRemoteVersion(version, note) {
+        document.getElementById('sysVerBadge').textContent = `v${version}`;
+        if (localSystemVersion === null || version === ownBroadcastVersion) {
+            localSystemVersion = Math.max(localSystemVersion || 0, version);
+            return;
+        }
+        if (version > localSystemVersion) {
+            const banner = document.getElementById('updateBanner');
+            document.getElementById('newVerText').textContent = `v${version} - ${note || '최신 업데이트'}`;
+            banner.classList.remove('hidden');
+            banner.classList.add('flex');
+        }
+    }
+
+    async function createFirebaseBackend(config) {
+        const [appSdk, authSdk, fsSdk] = await Promise.all([
+            import(`${FIREBASE_SDK}/firebase-app.js`),
+            import(`${FIREBASE_SDK}/firebase-auth.js`),
+            import(`${FIREBASE_SDK}/firebase-firestore.js`)
+        ]);
+        const app = appSdk.initializeApp(config);
+        const auth = authSdk.getAuth(app);
+        const db = fsSdk.getFirestore(app);
+        const { doc, collection, onSnapshot, runTransaction, getDoc } = fsSdk;
+        const configRef = doc(db, 'system', 'config');
+
+        const accountRef = uid => doc(db, 'accounts', uid);
+
+        onSnapshot(collection(db, 'accounts'), snap => {
+            const next = {};
+            snap.forEach(d => {
+                next[d.id] = normalizeAccount(d.id, d.data());
+            });
+            accounts = next;
+            setSyncStatus('cloud');
+            onAccountsChanged();
+        }, err => {
+            console.error('Accounts sync error:', err);
+            setSyncStatus('error');
+        });
+
+        onSnapshot(configRef, snap => {
+            const data = snap.exists() ? snap.data() : {};
+            handleRemoteVersion(Number(data.version) || 1, data.note);
+        }, err => console.error('Config sync error:', err));
+
+        authSdk.onAuthStateChanged(auth, async user => {
+            authUser = user ? { uid: user.uid, displayName: user.displayName || '' } : null;
+            currentAccountId = user ? user.uid : null;
+            profileNeeded = false;
+            onAccountsChanged();
+            if (!user) {
+                closeProfileModal();
+                return;
+            }
+            try {
+                const snap = await getDoc(accountRef(user.uid));
+                if (authUser && authUser.uid === user.uid && !snap.exists()) {
+                    profileNeeded = true;
+                    onAccountsChanged();
+                    openProfileModal();
+                }
+            } catch (err) {
+                console.error('Profile check error:', err);
+                showToast(describeError(err), 'error');
+            }
+        });
+
+        return {
+            async login() {
+                const provider = new authSdk.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                await authSdk.signInWithPopup(auth, provider);
+            },
+            async logout() {
+                await authSdk.signOut(auth);
+            },
+            async createProfile(nickname) {
+                const uid = auth.currentUser && auth.currentUser.uid;
+                if (!uid) throw new Error('먼저 Google 로그인을 해 주세요.');
+                const nickRef = doc(db, 'nicknames', nickname);
+                await runTransaction(db, async tx => {
+                    const accSnap = await tx.get(accountRef(uid));
+                    const nickSnap = await tx.get(nickRef);
+                    if (accSnap.exists()) return;
+                    if (nickSnap.exists()) throw new Error('이미 다른 참가자가 쓰고 있는 닉네임입니다.');
+                    const now = Date.now();
+                    tx.set(nickRef, { uid });
+                    tx.set(accountRef(uid), { nickname, cash: INITIAL_CASH, holdings: {}, createdAt: now, updatedAt: now });
+                });
+            },
+            async trade(mutate) {
+                const uid = auth.currentUser && auth.currentUser.uid;
+                if (!uid) throw new Error('로그인이 필요합니다.');
+                await runTransaction(db, async tx => {
+                    const ref = accountRef(uid);
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) throw new Error('계좌 정보를 찾을 수 없습니다.');
+                    const next = mutate(normalizeAccount(uid, snap.data()));
+                    tx.update(ref, { cash: next.cash, holdings: next.holdings, updatedAt: Date.now() });
+                });
+            },
+            async broadcast(note) {
+                return runTransaction(db, async tx => {
+                    const snap = await tx.get(configRef);
+                    const cur = snap.exists() ? (Number(snap.data().version) || 1) : 1;
+                    const next = cur + 1;
+                    ownBroadcastVersion = next;
+                    tx.set(configRef, { version: next, note, updatedAt: Date.now() });
+                    return next;
+                });
+            }
+        };
+    }
+
+    function setSyncStatus(status) {
+        syncStatus = status;
+        const presets = {
+            connecting: ['w-2 h-2 rounded-full bg-amber-400 animate-pulse', '클라우드 연결 중', '초기자금 5,000만 원 기준 · 클라우드에 연결하는 중입니다'],
+            cloud: ['w-2 h-2 rounded-full bg-emerald-400', '실시간 클라우드 동기화 중', '초기자금 5,000만 원 기준 · 모든 참가자의 자산이 클라우드에 저장됩니다'],
+            error: ['w-2 h-2 rounded-full bg-rose-500', '클라우드 연결 실패', '초기자금 5,000만 원 기준 · 클라우드에 연결하지 못했습니다. 새로고침해 주세요'],
+            missing: ['w-2 h-2 rounded-full bg-rose-500', 'Firebase 설정 필요', '초기자금 5,000만 원 기준 · index.html에 Firebase 설정값이 없습니다']
+        };
+        const [dotClass, text, subtitle] = presets[status];
+        document.getElementById('dbSyncDot').className = dotClass;
+        document.getElementById('dbSyncText').textContent = text;
+        document.getElementById('leaderboardSubtitle').textContent = subtitle;
+    }
+
+    async function initBackend() {
+        if (!FIREBASE_CONFIG) {
+            setSyncStatus('missing');
+            return;
+        }
+        setSyncStatus('connecting');
+        try {
+            backend = await createFirebaseBackend(FIREBASE_CONFIG);
+        } catch (err) {
+            console.error('Cloud init error:', err);
+            setSyncStatus('error');
+        }
+    }
+
+    function updateClockAndMarketStatus(now) {
+        document.getElementById('clockDisplay').textContent = formatKstTime(now);
+        const dot = document.getElementById('marketDot');
+        const label = document.getElementById('marketStatusLabel');
+        if (isMarketOpen(now)) {
+            dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+            label.className = 'font-bold text-emerald-400';
+            label.textContent = '장중 (06:00~24:00)';
+        } else {
+            dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+            label.className = 'font-bold text-rose-400';
+            label.textContent = '장 마감 · 06:00 개장';
+        }
+    }
+
+    function colorFor(diff) {
+        return diff > 0 ? 'kr-up' : (diff < 0 ? 'kr-down' : 'kr-flat');
+    }
+
+    function arrowFor(diff) {
+        return diff > 0 ? '▲' : (diff < 0 ? '▼' : '-');
+    }
+
+    function getAccountTotalValue(acc) {
+        let stockEval = 0;
+        Object.entries(acc.holdings || {}).forEach(([sid, h]) => {
+            if (h && h.qty > 0 && stocks[sid]) {
+                stockEval += h.qty * stocks[sid].price;
+            }
+        });
+        return {
+            cash: acc.cash,
+            stockEval,
+            total: acc.cash + stockEval
+        };
+    }
+
+    function renderNavbarAccount() {
+        const box = document.getElementById('loggedInUserBox');
+        const loginBtn = document.getElementById('loginOpenBtn');
+        const badge = document.getElementById('orderUserBadge');
+        const acc = getCurrentAccount();
+
+        if (acc) {
+            const { total } = getAccountTotalValue(acc);
+            box.classList.remove('hidden');
+            box.classList.add('flex');
+            loginBtn.classList.add('hidden');
+            document.getElementById('navUserName').textContent = acc.nickname;
+            document.getElementById('navUserAsset').textContent = `${total.toLocaleString()}원`;
+            badge.textContent = `접속자: ${acc.nickname}`;
+        } else {
+            box.classList.add('hidden');
+            box.classList.remove('flex');
+            loginBtn.classList.remove('hidden');
+            const loginText = document.getElementById('loginOpenText');
+            if (authUser && profileNeeded) {
+                loginText.textContent = '닉네임 정하기';
+                badge.textContent = '접속자: 닉네임 설정 필요';
+            } else if (authUser) {
+                loginText.textContent = '계좌 불러오는 중…';
+                badge.textContent = '접속자: 불러오는 중';
+            } else {
+                loginText.textContent = 'Google 로그인';
+                badge.textContent = '접속자: 로그인 필요';
+            }
+        }
+    }
+
+    function createLeaderRow() {
+        const tr = document.createElement('tr');
+        tr.dataset.row = '1';
+        tr.className = 'hover:bg-slate-800/40 transition';
+        tr.innerHTML = `
+            <td class="py-3 px-3"><span data-f="rank"></span></td>
+            <td class="py-3 px-3 font-extrabold text-white">
+                <span data-f="name"></span><span data-f="me" class="hidden ml-1.5 text-[11px] bg-blue-600 text-white px-1.5 py-0.5 rounded">나</span>
+            </td>
+            <td data-f="total" class="py-3 px-3 text-right font-black text-white"></td>
+            <td data-f="cash" class="py-3 px-3 text-right text-slate-300"></td>
+            <td data-f="stock" class="py-3 px-3 text-right text-slate-300"></td>
+            <td data-f="rate" class="py-3 px-3 text-right font-extrabold"></td>
+        `;
+        return tr;
+    }
+
+    const RANK_STYLES = {
+        1: ['px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-xs', '🥇 1위'],
+        2: ['px-2 py-0.5 rounded bg-slate-300 text-slate-950 font-extrabold text-xs', '🥈 2위'],
+        3: ['px-2 py-0.5 rounded bg-amber-700 text-white font-extrabold text-xs', '🥉 3위']
+    };
+
+    function renderLeaderboard() {
+        const tbody = document.getElementById('leaderboardTableBody');
+        const list = Object.values(accounts).map(acc => {
+            const { cash, stockEval, total } = getAccountTotalValue(acc);
+            const rate = ((total - INITIAL_CASH) / INITIAL_CASH) * 100;
+            return { id: acc.id, nickname: acc.nickname, cash, stockEval, total, rate };
+        }).sort((a, b) => b.total - a.total);
+
+        if (list.length === 0) {
+            if (!tbody.querySelector('[data-empty]')) {
+                tbody.innerHTML = `
+                    <tr data-empty="1">
+                        <td colspan="6" class="py-8 text-center text-slate-400">
+                            아직 등록된 참가자가 없습니다. 우측 상단 <strong>[Google 로그인]</strong> 버튼을 눌러 첫 참가자가 되어 보세요!
+                        </td>
+                    </tr>
+                `;
+            }
+            return;
+        }
+
+        if (tbody.querySelectorAll('tr[data-row]').length !== list.length) {
+            tbody.replaceChildren(...list.map(() => createLeaderRow()));
+        }
+
+        list.forEach((item, idx) => {
+            const row = tbody.children[idx];
+            const rank = idx + 1;
+            const isMe = item.id === currentAccountId;
+            const f = name => row.querySelector(`[data-f="${name}"]`);
+            const [rankClass, rankText] = RANK_STYLES[rank] || ['px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold text-xs', `${rank}위`];
+
+            row.classList.toggle('bg-blue-950/30', isMe);
+            f('rank').className = rankClass;
+            f('rank').textContent = rankText;
+            f('name').textContent = item.nickname;
+            f('me').classList.toggle('hidden', !isMe);
+            f('total').textContent = `${item.total.toLocaleString()}원`;
+            f('cash').textContent = `${item.cash.toLocaleString()}원`;
+            f('stock').textContent = `${item.stockEval.toLocaleString()}원`;
+            f('rate').className = `py-3 px-3 text-right font-extrabold ${colorFor(item.rate)}`;
+            f('rate').textContent = `${item.rate > 0 ? '+' : ''}${item.rate.toFixed(2)}%`;
+        });
+    }
+
+    function buildCompanyGrid() {
+        const grid = document.getElementById('companyGrid');
+        grid.innerHTML = COMPANY_META.map(m => `
+            <button type="button" data-stock="${m.id}" class="text-left bg-[#131722] hover:bg-slate-800/80 border border-slate-800 hover:border-blue-500/60 rounded-xl p-4 cursor-pointer transition shadow-md flex flex-col justify-between">
+                <div class="w-full">
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-[11px] font-mono text-slate-400">${m.id} · ${m.sector}</span>
+                        <span data-f="tag" class="hidden"></span>
+                    </div>
+                    <h3 class="font-extrabold text-base text-white">${m.name}</h3>
+                    <p class="text-[11px] text-slate-400 line-clamp-2 mt-1">${m.desc}</p>
+                </div>
+                <div class="w-full mt-4 pt-3 border-t border-slate-800/80 flex items-baseline justify-between">
+                    <span data-f="price" class="text-lg font-black"></span>
+                    <span data-f="rate" class="text-xs font-bold"></span>
+                </div>
+            </button>
+        `).join('');
+        grid.addEventListener('click', e => {
+            const card = e.target.closest('[data-stock]');
+            if (card) window.openCompanyTrade(card.dataset.stock);
+        });
+    }
+
+    function renderCompanyGrid() {
+        const acc = getCurrentAccount();
+        document.querySelectorAll('#companyGrid [data-stock]').forEach(card => {
+            const st = stocks[card.dataset.stock];
+            const diff = st.price - st.basePrice;
+            const rate = (diff / st.basePrice) * 100;
+            const color = colorFor(diff);
+            const priceEl = card.querySelector('[data-f="price"]');
+            const rateEl = card.querySelector('[data-f="rate"]');
+            const tagEl = card.querySelector('[data-f="tag"]');
+            const myHoldQty = acc && acc.holdings[st.id] ? acc.holdings[st.id].qty : 0;
+
+            priceEl.className = `text-lg font-black ${color}`;
+            priceEl.textContent = `${st.price.toLocaleString()}원`;
+            rateEl.className = `text-xs font-bold ${color}`;
+            rateEl.textContent = `${arrowFor(diff)} ${rate >= 0 ? '+' : ''}${rate.toFixed(2)}%`;
+
+            if (myHoldQty > 0) {
+                tagEl.className = 'text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold';
+                tagEl.textContent = `${myHoldQty.toLocaleString()}주 보유`;
+            } else if (st.price >= st.limits.upper) {
+                tagEl.className = 'text-[10px] bg-red-600 text-white font-black px-1.5 py-0.5 rounded';
+                tagEl.textContent = '상한가';
+            } else if (st.price <= st.limits.lower) {
+                tagEl.className = 'text-[10px] bg-blue-600 text-white font-black px-1.5 py-0.5 rounded';
+                tagEl.textContent = '하한가';
+            } else {
+                tagEl.className = 'hidden';
+                tagEl.textContent = '';
+            }
+        });
+    }
+
+    function renderTradeView() {
+        if (currentScreen !== 'TRADE') return;
+        const st = stocks[selectedStockId];
+        const diff = st.price - st.basePrice;
+        const rate = (diff / st.basePrice) * 100;
+        const colorClass = colorFor(diff);
+
+        document.getElementById('trCodeBadge').textContent = st.code;
+        document.getElementById('trStockTitle').textContent = st.name;
+        document.getElementById('trSectorBadge').textContent = st.sector;
+        document.getElementById('trStockDesc').textContent = st.desc;
+
+        const limitBadge = document.getElementById('trLimitBadge');
+        if (st.price >= st.limits.upper) {
+            limitBadge.className = 'text-xs font-extrabold px-2 py-0.5 rounded bg-red-600 text-white';
+            limitBadge.textContent = '상한가 (+50%)';
+        } else if (st.price <= st.limits.lower) {
+            limitBadge.className = 'text-xs font-extrabold px-2 py-0.5 rounded bg-blue-600 text-white';
+            limitBadge.textContent = '하한가 (-50%)';
+        } else {
+            limitBadge.className = 'hidden';
+        }
+
+        const pEl = document.getElementById('trCurrentPrice');
+        pEl.textContent = `${st.price.toLocaleString()}원`;
+        pEl.className = `text-2xl font-black ${colorClass}`;
+
+        const cEl = document.getElementById('trPriceChange');
+        cEl.textContent = `${arrowFor(diff)} ${Math.abs(diff).toLocaleString()} (${rate >= 0 ? '+' : ''}${rate.toFixed(2)}%)`;
+        cEl.className = `text-xs font-bold ${colorClass}`;
+
+        document.getElementById('trBasePrice').textContent = st.basePrice.toLocaleString();
+        document.getElementById('trUpperLimit').textContent = st.limits.upper.toLocaleString();
+        document.getElementById('trLowerLimit').textContent = st.limits.lower.toLocaleString();
+
+        drawCandleChart();
+        renderOrderBook();
+        renderTradeOrderInfo();
+    }
+
+    function drawCandleChart() {
+        const canvas = document.getElementById('stockCandleCanvas');
+        const container = document.getElementById('chartContainer');
+        if (!canvas || !container || currentScreen !== 'TRADE') return;
+
+        const rect = container.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        const dpr = window.devicePixelRatio || 1;
+        const pixelW = Math.round(rect.width * dpr);
+        const pixelH = Math.round(rect.height * dpr);
+        if (canvas.width !== pixelW) canvas.width = pixelW;
+        if (canvas.height !== pixelH) canvas.height = pixelH;
+
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const W = rect.width;
+        const H = rect.height;
+        ctx.fillStyle = '#0b0e14';
+        ctx.fillRect(0, 0, W, H);
+
+        const st = stocks[selectedStockId];
+        const candles = getChartCandles(st, selectedTimeframe);
+        ctx.font = '12px Pretendard, sans-serif';
+        if (candles.length === 0) {
+            ctx.fillStyle = '#64748b';
+            ctx.textAlign = 'center';
+            ctx.fillText('아직 표시할 봉이 없습니다 (06:00 개장)', W / 2, H / 2);
+            return;
+        }
+
+        const padTop = 24, padBottom = 24, padLeft = 16, padRight = 72;
+        const plotW = W - padLeft - padRight;
+        const plotH = H - padTop - padBottom;
+
+        let minP = Infinity, maxP = -Infinity;
+        candles.forEach(c => {
+            if (c.low < minP) minP = c.low;
+            if (c.high > maxP) maxP = c.high;
+        });
+        const margin = Math.max((maxP - minP) * 0.12, getTickSize(st.price) * 4);
+        minP = Math.max(0, minP - margin);
+        maxP += margin;
+        const toY = p => padTop + ((maxP - p) / (maxP - minP)) * plotH;
+
+        ctx.strokeStyle = '#1e293b';
+        ctx.fillStyle = '#64748b';
+        ctx.font = '11px Pretendard, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i <= 4; i++) {
+            const y = padTop + (plotH / 4) * i;
+            const pVal = Math.round(maxP - ((maxP - minP) / 4) * i);
+            ctx.beginPath();
+            ctx.moveTo(padLeft, y);
+            ctx.lineTo(padLeft + plotW, y);
+            ctx.stroke();
+            ctx.fillText(pVal.toLocaleString(), padLeft + plotW + 8, y + 4);
+        }
+
+        const slots = Math.max(candles.length, 40);
+        const stepW = plotW / slots;
+        const bodyW = Math.max(3, Math.min(16, stepW * 0.65));
+
+        candles.forEach((c, idx) => {
+            const cx = padLeft + idx * stepW + stepW / 2;
+            const yOpen = toY(c.open);
+            const yClose = toY(c.close);
+            const color = c.close >= c.open ? '#f04452' : '#3182f6';
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(cx, toY(c.high));
+            ctx.lineTo(cx, toY(c.low));
+            ctx.stroke();
+
+            ctx.fillStyle = color;
+            ctx.fillRect(cx - bodyW / 2, Math.min(yOpen, yClose), bodyW, Math.max(2, Math.abs(yClose - yOpen)));
+        });
+
+        const yNow = toY(st.price);
+        const nowColor = st.price >= st.basePrice ? '#f04452' : '#3182f6';
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = nowColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padLeft, yNow);
+        ctx.lineTo(padLeft + plotW, yNow);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = nowColor;
+        ctx.fillRect(padLeft + plotW + 2, yNow - 9, padRight - 4, 18);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(st.price.toLocaleString(), padLeft + plotW + 8, yNow + 4);
+    }
+
+    function buildOrderBookRows() {
+        const askRow = `
+            <div data-price="" class="grid grid-cols-3 items-center py-1.5 px-2 bg-kr-down-soft hover:bg-slate-800 transition">
+                <div data-f="qty" class="kr-down font-semibold"></div>
+                <div class="text-center">
+                    <span data-f="price" class="font-extrabold kr-down block"></span>
+                    <span data-f="rate" class="text-[10px] text-slate-400"></span>
+                </div>
+                <div></div>
+            </div>`;
+        const midRow = `
+            <div data-price="" class="grid grid-cols-3 items-center py-2 px-2 bg-slate-900 border-y border-slate-700 cursor-pointer">
+                <div class="text-[10px] text-slate-400">현재가</div>
+                <div data-f="price" class="text-center font-black text-sm"></div>
+                <div></div>
+            </div>`;
+        const bidRow = `
+            <div data-price="" class="grid grid-cols-3 items-center py-1.5 px-2 bg-kr-up-soft hover:bg-slate-800 transition">
+                <div></div>
+                <div class="text-center">
+                    <span data-f="price" class="font-extrabold kr-up block"></span>
+                    <span data-f="rate" class="text-[10px] text-slate-400"></span>
+                </div>
+                <div data-f="qty" class="text-right kr-up font-semibold"></div>
+            </div>`;
+        const container = document.getElementById('orderBookRows');
+        container.innerHTML = askRow.repeat(5) + midRow + bidRow.repeat(5);
+        container.addEventListener('click', e => {
+            const row = e.target.closest('[data-price]');
+            if (row && row.dataset.price) window.setOrderPriceFromBook(Number(row.dataset.price));
+        });
+    }
+
+    function fillOrderBookLevel(row, level, st) {
+        const priceEl = row.querySelector('[data-f="price"]');
+        const rateEl = row.querySelector('[data-f="rate"]');
+        const qtyEl = row.querySelector('[data-f="qty"]');
+        row.classList.toggle('opacity-40', !level.valid);
+        row.classList.toggle('cursor-pointer', level.valid);
+        row.classList.toggle('cursor-not-allowed', !level.valid);
+        if (!level.valid) {
+            row.dataset.price = '';
+            priceEl.textContent = '-';
+            rateEl.textContent = '';
+            qtyEl.textContent = '';
+            return;
+        }
+        const rate = ((level.price - st.basePrice) / st.basePrice) * 100;
+        row.dataset.price = String(level.price);
+        priceEl.textContent = level.price.toLocaleString();
+        rateEl.textContent = `${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%`;
+        qtyEl.textContent = level.qty.toLocaleString();
+    }
+
+    function renderOrderBook() {
+        const st = stocks[selectedStockId];
+        const rows = document.getElementById('orderBookRows').children;
+        st.orderBook.asks.forEach((a, i) => fillOrderBookLevel(rows[i], a, st));
+
+        const mid = rows[5];
+        const midPrice = mid.querySelector('[data-f="price"]');
+        mid.dataset.price = String(st.price);
+        midPrice.className = `text-center font-black text-sm ${colorFor(st.price - st.basePrice)}`;
+        midPrice.textContent = `${st.price.toLocaleString()}원`;
+
+        st.orderBook.bids.forEach((b, i) => fillOrderBookLevel(rows[6 + i], b, st));
+    }
+
+    function readOrderQty() {
+        return Number(document.getElementById('inputOrderQty').value);
+    }
+
+    function renderTradeOrderInfo() {
+        const st = stocks[selectedStockId];
+        const qty = readOrderQty();
+        const total = Number.isInteger(qty) && qty > 0 ? st.price * qty : 0;
+        document.getElementById('orderTotalText').textContent = `${total.toLocaleString()}원`;
+
+        const acc = getCurrentAccount();
+        if (!acc) {
+            document.getElementById('myCashText').textContent = '로그인 필요';
+            document.getElementById('myStockQtyText').textContent = '0주';
+            document.getElementById('myStockAvgText').textContent = '0원';
+            document.getElementById('myStockRateText').textContent = '0.00%';
+            document.getElementById('myStockRateText').className = 'font-extrabold kr-flat';
+            document.getElementById('availQtyHint').textContent = '최대 가능: 0주';
+            return;
+        }
+
+        const hold = acc.holdings[selectedStockId] || { qty: 0, avgPrice: 0 };
+
+        document.getElementById('myCashText').textContent = `${acc.cash.toLocaleString()}원`;
+        document.getElementById('myStockQtyText').textContent = `${hold.qty.toLocaleString()}주`;
+        document.getElementById('myStockAvgText').textContent = `${Math.round(hold.avgPrice).toLocaleString()}원`;
+
+        const rateEl = document.getElementById('myStockRateText');
+        if (hold.qty > 0 && hold.avgPrice > 0) {
+            const r = ((st.price - hold.avgPrice) / hold.avgPrice) * 100;
+            rateEl.textContent = `${r >= 0 ? '+' : ''}${r.toFixed(2)}%`;
+            rateEl.className = `font-extrabold ${colorFor(r)}`;
+        } else {
+            rateEl.textContent = '0.00%';
+            rateEl.className = 'font-extrabold kr-flat';
+        }
+
+        if (currentTradeSide === 'BUY') {
+            const maxBuy = Math.floor(acc.cash / st.price);
+            document.getElementById('availQtyHint').textContent = `최대 매수가능: ${maxBuy.toLocaleString()}주`;
+        } else {
+            document.getElementById('availQtyHint').textContent = `매도가능 보유: ${hold.qty.toLocaleString()}주`;
+        }
+    }
+
+    function refreshAllViews() {
+        if (!stocks[selectedStockId]) return;
+        renderNavbarAccount();
+        if (currentScreen === 'LOBBY') {
+            renderLeaderboard();
+            renderCompanyGrid();
+        } else {
+            renderTradeView();
+        }
+    }
+
+    window.switchScreen = function(screen) {
+        currentScreen = screen;
+        const lobby = document.getElementById('lobbyScreen');
+        const trade = document.getElementById('tradeScreen');
+        const backBtn = document.getElementById('backLobbyBtn');
+
+        if (screen === 'LOBBY') {
+            lobby.classList.remove('hidden');
+            trade.classList.add('hidden');
+            backBtn.classList.add('hidden');
+            backBtn.classList.remove('flex');
+        } else {
+            lobby.classList.add('hidden');
+            trade.classList.remove('hidden');
+            backBtn.classList.remove('hidden');
+            backBtn.classList.add('flex');
+        }
+        refreshAllViews();
+    };
+
+    window.openCompanyTrade = function(stockId) {
+        selectedStockId = stockId;
+        document.getElementById('inputOrderPrice').value = stocks[stockId].price;
+        document.getElementById('inputOrderQty').value = 1;
+        window.switchScreen('TRADE');
+    };
+
+    window.selectTimeframe = function(tf) {
+        selectedTimeframe = tf;
+        TIMEFRAMES.forEach(item => {
+            const btn = document.getElementById(`tfBtn_${item}`);
+            if (item === tf) {
+                btn.className = 'px-2.5 py-1 rounded text-xs font-bold bg-blue-600 text-white transition';
+            } else {
+                btn.className = 'px-2.5 py-1 rounded text-xs font-bold text-slate-400 hover:text-white transition';
+            }
+        });
+        drawCandleChart();
+    };
+
+    window.setOrderPriceFromBook = function(price) {
+        document.getElementById('inputOrderPrice').value = price;
+        window.calcOrderTotal();
+    };
+
+    window.setTradeSide = function(side) {
+        currentTradeSide = side;
+        const buyBtn = document.getElementById('sideBtnBuy');
+        const sellBtn = document.getElementById('sideBtnSell');
+        const mainBtn = document.getElementById('mainOrderBtn');
+
+        if (side === 'BUY') {
+            buyBtn.className = 'py-2.5 rounded-lg font-extrabold text-xs bg-kr-up text-white transition';
+            sellBtn.className = 'py-2.5 rounded-lg font-extrabold text-xs text-slate-400 hover:text-white transition';
+            mainBtn.className = 'w-full py-3.5 rounded-xl bg-kr-up hover:opacity-95 text-white font-black text-sm shadow-lg transition disabled:opacity-50';
+            mainBtn.textContent = '매수 주문 체결하기';
+        } else {
+            sellBtn.className = 'py-2.5 rounded-lg font-extrabold text-xs bg-kr-down text-white transition';
+            buyBtn.className = 'py-2.5 rounded-lg font-extrabold text-xs text-slate-400 hover:text-white transition';
+            mainBtn.className = 'w-full py-3.5 rounded-xl bg-kr-down hover:opacity-95 text-white font-black text-sm shadow-lg transition disabled:opacity-50';
+            mainBtn.textContent = '매도 주문 체결하기';
+        }
+        renderTradeOrderInfo();
+    };
+
+    window.resetPriceToCurrent = function() {
+        document.getElementById('inputOrderPrice').value = stocks[selectedStockId].price;
+        window.calcOrderTotal();
+    };
+
+    window.stepOrderPrice = function(dir) {
+        const st = stocks[selectedStockId];
+        const raw = Number(document.getElementById('inputOrderPrice').value);
+        const cur = raw > 0 ? alignToTick(raw) : st.price;
+        const next = clampToLimits(dir > 0 ? nextUp(cur) : nextDown(cur), st.limits);
+        document.getElementById('inputOrderPrice').value = next;
+        window.calcOrderTotal();
+    };
+
+    window.stepOrderQty = function(dir) {
+        const raw = Math.floor(readOrderQty());
+        const cur = raw > 0 ? raw : 1;
+        document.getElementById('inputOrderQty').value = Math.max(1, cur + dir);
+        window.calcOrderTotal();
+    };
+
+    window.fillQtyByRatio = function(ratio) {
+        const acc = getCurrentAccount();
+        if (!acc) {
+            showToast('먼저 로그인해 주세요!', 'error');
+            window.handleLoginButton();
+            return;
+        }
+        const st = stocks[selectedStockId];
+        const maxQty = currentTradeSide === 'BUY'
+            ? Math.floor(acc.cash / st.price)
+            : (acc.holdings[selectedStockId] ? acc.holdings[selectedStockId].qty : 0);
+        const qty = Math.floor(maxQty * ratio);
+
+        if (qty < 1) {
+            showToast(currentTradeSide === 'BUY' ? '현금이 부족해 매수 가능한 수량이 없습니다.' : '매도할 수 있는 보유 수량이 없습니다.', 'error');
+            return;
+        }
+        document.getElementById('inputOrderQty').value = qty;
+        window.calcOrderTotal();
+    };
+
+    window.calcOrderTotal = function() {
+        renderTradeOrderInfo();
+    };
+
+    window.submitTradeOrder = async function() {
+        if (tradeBusy) return;
+        if (!getCurrentAccount()) {
+            showToast('거래하려면 먼저 Google 로그인을 해주세요!', 'error');
+            window.handleLoginButton();
+            return;
+        }
+
+        if (!isMarketOpen(Date.now())) {
+            showToast('현재 장 마감 시간(00:00~05:59)입니다. 06:00 이후에 거래해 주세요.', 'error');
+            return;
+        }
+
+        const st = stocks[selectedStockId];
+        const execPrice = st.price;
+        const orderPrice = Number(document.getElementById('inputOrderPrice').value);
+        const orderQty = readOrderQty();
+
+        if (!Number.isInteger(orderQty) || orderQty < 1) {
+            showToast('주문 수량은 1주 이상의 정수로 입력해 주세요.', 'error');
+            return;
+        }
+        if (!(orderPrice > 0)) {
+            showToast('올바른 주문 단가를 입력해 주세요.', 'error');
+            return;
+        }
+        if (orderPrice > st.limits.upper || orderPrice < st.limits.lower) {
+            showToast(`상한가(${st.limits.upper.toLocaleString()}원) ~ 하한가(${st.limits.lower.toLocaleString()}원) 범위 내에서만 주문할 수 있습니다.`, 'error');
+            return;
+        }
+        if (currentTradeSide === 'BUY' && orderPrice < execPrice) {
+            showToast(`즉시 체결을 위해 현재가(${execPrice.toLocaleString()}원) 이상으로 단가를 입력해 주세요.`, 'error');
+            return;
+        }
+        if (currentTradeSide === 'SELL' && orderPrice > execPrice) {
+            showToast(`즉시 체결을 위해 현재가(${execPrice.toLocaleString()}원) 이하로 단가를 입력해 주세요.`, 'error');
+            return;
+        }
+
+        const side = currentTradeSide;
+        const stockId = selectedStockId;
+        const mainBtn = document.getElementById('mainOrderBtn');
+        tradeBusy = true;
+        mainBtn.disabled = true;
+        try {
+            await backend.trade(acc => applyTradeToAccount(acc, side, stockId, orderQty, execPrice));
+            showToast(`[${side === 'BUY' ? '매수' : '매도'} 체결] ${st.name} ${orderQty.toLocaleString()}주 (${execPrice.toLocaleString()}원)`, side === 'BUY' ? 'buy' : 'sell');
+        } catch (err) {
+            showToast(describeError(err), 'error');
+        } finally {
+            tradeBusy = false;
+            mainBtn.disabled = false;
+            refreshAllViews();
+        }
+    };
+
+    function backendUnavailableMessage() {
+        if (syncStatus === 'missing') return 'Firebase 설정값이 없어 로그인할 수 없습니다.';
+        if (syncStatus === 'error') return '클라우드에 연결하지 못했습니다. 새로고침해 주세요.';
+        return '서버에 연결하는 중입니다. 잠시 후 다시 시도해 주세요.';
+    }
+
+    async function startGoogleLogin() {
+        if (!backend) {
+            showToast(backendUnavailableMessage(), 'error');
+            return;
+        }
+        const inApp = detectInAppBrowser();
+        if (inApp === 'kakao') {
+            window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(window.location.href)}`;
+            return;
+        }
+        if (inApp) {
+            showToast('앱 안에서 열린 브라우저에서는 Google 로그인이 막혀 있습니다. 메뉴의 [다른 브라우저로 열기]를 눌러 Chrome이나 Safari에서 열어 주세요.', 'error');
+            return;
+        }
+        if (loginBusy) return;
+        loginBusy = true;
+        try {
+            await backend.login();
+        } catch (err) {
+            if (!SILENT_AUTH_ERRORS.includes(err && err.code)) showToast(describeError(err), 'error');
+        } finally {
+            loginBusy = false;
+        }
+    }
+
+    window.handleLoginButton = function() {
+        if (authUser && profileNeeded) {
+            openProfileModal();
+            return;
+        }
+        if (authUser) return;
+        startGoogleLogin();
+    };
+
+    window.switchGoogleAccount = function() {
+        startGoogleLogin();
+    };
+
+    function openProfileModal() {
+        const input = document.getElementById('profileNickname');
+        if (!input.value && authUser) input.value = [...authUser.displayName].slice(0, 10).join('');
+        const modal = document.getElementById('profileModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        input.focus();
+    }
+
+    function closeProfileModal() {
+        const modal = document.getElementById('profileModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    window.closeProfileModal = closeProfileModal;
+
+    async function submitProfile() {
+        if (profileBusy || !backend) return;
+        const nickname = document.getElementById('profileNickname').value.trim();
+        const nicknameError = validateNickname(nickname);
+        if (nicknameError) {
+            showToast(nicknameError, 'error');
+            return;
+        }
+
+        const btn = document.getElementById('profileSubmitBtn');
+        profileBusy = true;
+        btn.disabled = true;
+        try {
+            await backend.createProfile(nickname);
+            profileNeeded = false;
+            closeProfileModal();
+            showToast(`[${nickname}] 계좌가 생성되었습니다! (초기자금 5,000만 원 지급)`, 'buy');
+            refreshAllViews();
+        } catch (err) {
+            showToast(describeError(err), 'error');
+        } finally {
+            profileBusy = false;
+            btn.disabled = false;
+        }
+    }
+
+    window.logoutAccount = async function() {
+        if (!backend) return;
+        try {
+            await backend.logout();
+            showToast('로그아웃되었습니다.', 'info');
+        } catch (err) {
+            showToast(describeError(err), 'error');
+        }
+    };
+
+    window.openBroadcastModal = function() {
+        if (!getCurrentAccount()) {
+            showToast('업데이트 알림은 로그인한 참가자만 보낼 수 있습니다.', 'error');
+            window.handleLoginButton();
+            return;
+        }
+        const modal = document.getElementById('broadcastModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+
+    window.closeBroadcastModal = function() {
+        const modal = document.getElementById('broadcastModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    };
+
+    window.triggerBroadcastUpdate = async function() {
+        if (!backend) return;
+        const note = document.getElementById('updateNoteInput').value.trim().slice(0, 100) || '새로운 버전 업데이트';
+        const btn = document.getElementById('broadcastSubmitBtn');
+        btn.disabled = true;
+        try {
+            const nextVer = await backend.broadcast(note);
+            localSystemVersion = Math.max(localSystemVersion || 0, nextVer);
+            document.getElementById('sysVerBadge').textContent = `v${nextVer}`;
+            showToast(`v${nextVer} 업데이트 알림이 모든 참가자 화면에 발송되었습니다!`, 'buy');
+            window.closeBroadcastModal();
+        } catch (err) {
+            showToast(describeError(err), 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    };
+
+    window.applySystemUpdate = function() {
+        window.location.reload();
+    };
+
+    function showToast(msg, type = 'info') {
+        const wrap = document.getElementById('toastWrap');
+        const el = document.createElement('div');
+        let style = 'bg-slate-900 border-slate-700 text-white';
+        if (type === 'buy') style = 'bg-[#241217] border-red-500/60 text-red-100';
+        if (type === 'sell') style = 'bg-[#111a2e] border-blue-500/60 text-blue-100';
+        if (type === 'error') style = 'bg-amber-950 border-amber-500/70 text-amber-100';
+
+        el.className = `px-4 py-3 rounded-xl border shadow-2xl text-xs font-bold transition-all duration-300 ${style}`;
+        el.textContent = msg;
+        wrap.appendChild(el);
+        setTimeout(() => {
+            el.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => el.remove(), 300);
+        }, 2800);
+    }
+
+    function start() {
+        buildMarket(Date.now());
+        buildCompanyGrid();
+        buildOrderBookRows();
+
+        document.getElementById('profileForm').addEventListener('submit', e => {
+            e.preventDefault();
+            submitProfile();
+        });
+
+        window.addEventListener('resize', () => {
+            if (currentScreen === 'TRADE') drawCandleChart();
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) tickMarket();
+        });
+
+        updateClockAndMarketStatus(Date.now());
+        refreshAllViews();
+        setInterval(tickMarket, 1000);
+        initBackend();
+    }
+
+    start();
+</script>
+</body>
+</html>
