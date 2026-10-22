@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Firebase 콘솔 > Firestore Database > 규칙 탭에 그대로 붙여넣고 [게시]하세요.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // index.html 의 ADMIN_EMAIL 과 같아야 합니다.
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'kimminjoon1205@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /accounts/{uid} {
+      allow read: if true;
+      allow create: if isOwner(uid);
+      // 본인 거래 또는 관리자 초기화
+      allow update: if isOwner(uid) || isAdmin();
+      // 관리자만 계좌 삭제
+      allow delete: if isAdmin();
+    }
+
+    match /nicknames/{nickname} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      // 관리자가 계좌를 삭제할 때 닉네임도 함께 지웁니다.
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /system/config {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

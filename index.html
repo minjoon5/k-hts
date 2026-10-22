@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.3">
+    <meta name="app-version" content="1.0.4">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -3958,7 +3958,10 @@
                 showToast(`[${acc.nickname}] 계좌를 삭제했습니다.`, 'info');
             }
         } catch (err) {
-            showToast(describeError(err), 'error');
+            const msg = err && err.code === 'permission-denied'
+                ? 'Firestore 보안 규칙이 관리자 권한을 허용하지 않습니다. 저장소의 firestore.rules 를 Firebase 콘솔 규칙에 게시해 주세요.'
+                : describeError(err);
+            showToast(msg, 'error');
         } finally {
             adminBusy = false;
             renderAdminPanel();
