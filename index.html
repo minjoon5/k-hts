@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.2">
+    <meta name="app-version" content="1.0.3">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -3161,9 +3161,9 @@
     }
 
     const RANK_STYLES = {
-        1: ['px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-xs', '🥇 1위'],
-        2: ['px-2 py-0.5 rounded bg-slate-300 text-slate-950 font-extrabold text-xs', '🥈 2위'],
-        3: ['px-2 py-0.5 rounded bg-amber-700 text-white font-extrabold text-xs', '🥉 3위']
+        1: ['px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-xs', '🥇'],
+        2: ['px-2 py-0.5 rounded bg-slate-300 text-slate-950 font-extrabold text-xs', '🥈'],
+        3: ['px-2 py-0.5 rounded bg-amber-700 text-white font-extrabold text-xs', '🥉']
     };
 
     function renderLeaderboard() {
@@ -3191,15 +3191,23 @@
             tbody.replaceChildren(...list.map(() => createLeaderRow()));
         }
 
+        // 총자산이 같으면 공동 순위 (예: 1, 1, 3위)
+        const ranks = [];
+        list.forEach((item, idx) => {
+            ranks[idx] = idx > 0 && item.total === list[idx - 1].total ? ranks[idx - 1] : idx + 1;
+        });
+
         list.forEach((item, idx) => {
             const row = tbody.children[idx];
-            const rank = idx + 1;
+            const rank = ranks[idx];
+            const isTied = (idx > 0 && ranks[idx - 1] === rank) || ranks[idx + 1] === rank;
             const isMe = item.id === currentAccountId;
             const f = name => row.querySelector(`[data-f="${name}"]`);
-            const [rankClass, rankText] = RANK_STYLES[rank] || [
+            const [rankClass, medal] = RANK_STYLES[rank] || [
                 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold text-xs',
-                `${rank}위`
+                ''
             ];
+            const rankText = `${medal ? medal + ' ' : ''}${isTied ? '공동 ' : ''}${rank}위`;
 
             row.classList.toggle('bg-blue-950/30', isMe);
             f('rank').className = rankClass;
