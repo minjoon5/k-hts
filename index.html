@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.6">
+    <meta name="app-version" content="1.0.7">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -143,7 +143,7 @@
             -webkit-text-size-adjust: 100%;
             -moz-tab-size: 4;
             tab-size: 4;
-            font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
             font-feature-settings: normal;
             font-variation-settings: normal;
             -webkit-tap-highlight-color: transparent;
@@ -188,7 +188,7 @@
         kbd,
         samp,
         pre {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
             font-feature-settings: normal;
             font-variation-settings: normal;
             font-size: 1em;
@@ -1221,7 +1221,8 @@
         }
 
         .font-mono {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            font-variant-numeric: tabular-nums;
         }
 
         .text-2xl {
@@ -3351,7 +3352,7 @@
 
         const st = stocks[selectedStockId];
         const candles = getChartCandles(st, selectedTimeframe);
-        ctx.font = '12px Pretendard, sans-serif';
+        ctx.font = "12px 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
         if (candles.length === 0) {
             ctx.fillStyle = '#64748b';
             ctx.textAlign = 'center';
@@ -3375,7 +3376,7 @@
 
         ctx.strokeStyle = '#1e293b';
         ctx.fillStyle = '#64748b';
-        ctx.font = '11px Pretendard, sans-serif';
+        ctx.font = "11px 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
         ctx.textAlign = 'left';
         ctx.lineWidth = 1;
 
@@ -4147,6 +4148,11 @@
         window.addEventListener('resize', () => {
             if (currentScreen === 'TRADE') drawCandleChart();
         });
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(() => {
+                if (currentScreen === 'TRADE') drawCandleChart();
+            });
+        }
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) tickMarket();
         });
