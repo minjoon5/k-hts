@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.0">
+    <meta name="app-version" content="1.0.1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 모의주식 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -526,6 +526,10 @@
             display: flex;
         }
 
+        .inline-flex {
+            display: inline-flex;
+        }
+
         .table {
             display: table;
         }
@@ -566,6 +570,14 @@
             height: 100%;
         }
 
+        .max-h-\[90vh\] {
+            max-height: 90vh;
+        }
+
+        .min-h-0 {
+            min-height: 0px;
+        }
+
         .min-h-\[320px\] {
             min-height: 320px;
         }
@@ -604,6 +616,10 @@
 
         .w-full {
             width: 100%;
+        }
+
+        .max-w-2xl {
+            max-width: 42rem;
         }
 
         .max-w-7xl {
@@ -750,6 +766,10 @@
             gap: 0.875rem;
         }
 
+        .gap-5 {
+            gap: 1.25rem;
+        }
+
         .space-y-1 > :not([hidden]) ~ :not([hidden]) {
             --tw-space-y-reverse: 0;
             margin-top: calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));
@@ -806,6 +826,10 @@
             border-color: rgb(30 41 59 / 0.6);
         }
 
+        .overflow-auto {
+            overflow: auto;
+        }
+
         .overflow-hidden {
             overflow: hidden;
         }
@@ -840,6 +864,10 @@
 
         .rounded-lg {
             border-radius: 0.5rem;
+        }
+
+        .rounded-md {
+            border-radius: 0.375rem;
         }
 
         .rounded-xl {
@@ -877,6 +905,10 @@
             border-color: rgb(245 158 11 / 0.3);
         }
 
+        .border-amber-500\/40 {
+            border-color: rgb(245 158 11 / 0.4);
+        }
+
         .border-amber-500\/70 {
             border-color: rgb(245 158 11 / 0.7);
         }
@@ -895,6 +927,10 @@
 
         .border-red-500\/60 {
             border-color: rgb(239 68 68 / 0.6);
+        }
+
+        .border-rose-500\/40 {
+            border-color: rgb(244 63 94 / 0.4);
         }
 
         .border-slate-700 {
@@ -1142,6 +1178,11 @@
             padding-bottom: 0.875rem;
         }
 
+        .py-6 {
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
+        }
+
         .py-8 {
             padding-top: 2rem;
             padding-bottom: 2rem;
@@ -1290,6 +1331,11 @@
             color: rgb(254 226 226 / var(--tw-text-opacity, 1));
         }
 
+        .text-rose-300 {
+            --tw-text-opacity: 1;
+            color: rgb(253 164 175 / var(--tw-text-opacity, 1));
+        }
+
         .text-rose-400 {
             --tw-text-opacity: 1;
             color: rgb(251 113 133 / var(--tw-text-opacity, 1));
@@ -1397,6 +1443,10 @@
             background-color: rgb(251 191 36 / var(--tw-bg-opacity, 1));
         }
 
+        .hover\:bg-amber-500\/10:hover {
+            background-color: rgb(245 158 11 / 0.1);
+        }
+
         .hover\:bg-amber-500\/20:hover {
             background-color: rgb(245 158 11 / 0.2);
         }
@@ -1408,6 +1458,10 @@
 
         .hover\:bg-emerald-500\/20:hover {
             background-color: rgb(16 185 129 / 0.2);
+        }
+
+        .hover\:bg-rose-500\/10:hover {
+            background-color: rgb(244 63 94 / 0.1);
         }
 
         .hover\:bg-slate-700:hover {
@@ -1598,6 +1652,86 @@
             -webkit-appearance: none;
             margin: 0;
         }
+
+        .scroll-fade {
+            --bg: 19, 23, 34;
+            --fade-size: 28px;
+            position: relative;
+        }
+
+        .fade-bg-page,
+        .page-fade {
+            --bg: 11, 14, 20;
+        }
+
+        .fade-edge,
+        .page-fade {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 5;
+            background: linear-gradient(var(--fade-dir),
+                rgb(var(--bg)) 0%,
+                rgba(var(--bg), 0.90) 20%,
+                rgba(var(--bg), 0.65) 40%,
+                rgba(var(--bg), 0.35) 60%,
+                rgba(var(--bg), 0.15) 80%,
+                rgba(var(--bg), 0) 100%
+            );
+        }
+
+        .fade-edge.is-visible,
+        .page-fade.is-visible {
+            opacity: 1;
+        }
+
+        .fade-top,
+        .fade-bottom {
+            left: 0;
+            right: 0;
+            height: var(--fade-size);
+        }
+
+        .fade-left,
+        .fade-right {
+            top: 0;
+            bottom: 0;
+            width: var(--fade-size);
+        }
+
+        .fade-top {
+            top: 0;
+            --fade-dir: to bottom;
+        }
+
+        .fade-bottom {
+            bottom: 0;
+            --fade-dir: to top;
+        }
+
+        .fade-left {
+            left: 0;
+            --fade-dir: to right;
+        }
+
+        .fade-right {
+            right: 0;
+            --fade-dir: to left;
+        }
+
+        .page-fade {
+            position: fixed;
+            z-index: 40;
+            --fade-size: 40px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .fade-edge,
+            .page-fade {
+                transition: none;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col lg:h-screen lg:overflow-hidden">
@@ -1697,72 +1831,81 @@
             <span class="hidden md:inline">앱 설치</span>
         </button>
         <button
-            onclick="openBroadcastModal()"
-            class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5"
-            title="코드를 수정한 뒤 접속 중인 참가자들의 화면에 새로고침 배너를 띄웁니다"
+            id="adminOpenBtn"
+            onclick="openAdminModal()"
+            class="hidden bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-2 rounded-lg transition items-center gap-1.5"
+            title="관리자 전용: 업데이트 알림과 참가자 계좌를 관리합니다"
         >
-            <i class="fa-solid fa-bullhorn"></i>
-            <span class="hidden md:inline">업데이트 배포</span>
+            <i class="fa-solid fa-user-gear"></i>
+            <span class="hidden md:inline">관리자</span>
         </button>
     </div>
 </header>
 
-<main id="lobbyScreen" class="flex-1 overflow-y-auto p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+<div id="lobbyScreen" class="scroll-fade fade-bg-page flex-1 min-h-0 flex flex-col" data-fade="y">
+    <main
+        id="lobbyScroll"
+        data-fade-scroller
+        class="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6"
+    >
 
-    <section class="bg-[#131722] border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <div>
-                <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-trophy text-amber-400"></i> 실시간 수익률 랭킹 리더보드
-                </h2>
-                <p id="leaderboardSubtitle" class="text-xs text-slate-400 mt-0.5">초기자금 5,000만 원 기준</p>
+        <section class="bg-[#131722] border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div>
+                    <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-amber-400"></i> 실시간 수익률 랭킹 리더보드
+                    </h2>
+                    <p id="leaderboardSubtitle" class="text-xs text-slate-400 mt-0.5">초기자금 5,000만 원 기준</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <span
+                        id="dbSyncBadge"
+                        class="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-slate-800"
+                    >
+                        <span id="dbSyncDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span id="dbSyncText">연결 중</span>
+                    </span>
+                </div>
             </div>
-            <div class="flex items-center gap-2 text-xs text-slate-400">
-                <span
-                    id="dbSyncBadge"
-                    class="flex items-center gap-1.5 bg-[#0b0e14] px-3 py-1 rounded-full border border-slate-800"
-                >
-                    <span id="dbSyncDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                    <span id="dbSyncText">연결 중</span>
-                </span>
+
+            <div class="scroll-fade" data-fade="x">
+                <div class="overflow-x-auto" data-fade-scroller>
+                    <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
+                        <thead>
+                            <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
+                                <th class="py-2.5 px-3 font-bold w-16">순위</th>
+                                <th class="py-2.5 px-3 font-bold">참가자 (닉네임)</th>
+                                <th class="py-2.5 px-3 font-bold text-right">총 평가자산</th>
+                                <th class="py-2.5 px-3 font-bold text-right">보유 현금</th>
+                                <th class="py-2.5 px-3 font-bold text-right">주식 평가금</th>
+                                <th class="py-2.5 px-3 font-bold text-right">누적 수익률</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardTableBody" class="divide-y divide-slate-800/60">
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
-                <thead>
-                    <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
-                        <th class="py-2.5 px-3 font-bold w-16">순위</th>
-                        <th class="py-2.5 px-3 font-bold">참가자 (닉네임)</th>
-                        <th class="py-2.5 px-3 font-bold text-right">총 평가자산</th>
-                        <th class="py-2.5 px-3 font-bold text-right">보유 현금</th>
-                        <th class="py-2.5 px-3 font-bold text-right">주식 평가금</th>
-                        <th class="py-2.5 px-3 font-bold text-right">누적 수익률</th>
-                    </tr>
-                </thead>
-                <tbody id="leaderboardTableBody" class="divide-y divide-slate-800/60">
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="space-y-3">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-building text-blue-400"></i> 상장 10대 기업 선택 (클릭 시 거래화면 이동)
-                </h2>
-                <p class="text-xs text-slate-400 mt-0.5">상장 기준가 대비 상한가(+50%) · 하한가(-50%) 제한 · 모든 참가자에게 같은 시세가 표시됩니다</p>
+        <section class="space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-building text-blue-400"></i> 상장 10대 기업 선택 (클릭 시 거래화면 이동)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">상장 기준가 대비 상한가(+50%) · 하한가(-50%) 제한 · 모든 참가자에게 같은 시세가 표시됩니다</p>
+                </div>
             </div>
-        </div>
 
-        <div
-            id="companyGrid"
-            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5"
-        >
+            <div
+                id="companyGrid"
+                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5"
+            >
         </div>
     </section>
 </main>
+</div>
 
 <main
     id="tradeScreen"
@@ -1866,10 +2009,13 @@
             <div>호가</div>
             <div>매수잔량</div>
         </div>
-        <div
-            id="orderBookRows"
-            class="flex-1 flex flex-col justify-between divide-y divide-slate-800/40 text-xs overflow-y-auto"
-        >
+        <div class="scroll-fade flex-1 min-h-0 flex flex-col" data-fade="y">
+            <div
+                id="orderBookRows"
+                data-fade-scroller
+                class="flex-1 min-h-0 flex flex-col justify-between divide-y divide-slate-800/40 text-xs overflow-y-auto"
+            >
+            </div>
         </div>
     </section>
 
@@ -2039,6 +2185,64 @@
     </div>
 </div>
 
+<div
+    id="adminModal"
+    class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4"
+    onclick="if (event.target === this) closeAdminModal()"
+>
+    <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] p-6 shadow-2xl flex flex-col gap-5">
+        <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                <i class="fa-solid fa-user-gear text-amber-400"></i> 관리자 도구
+            </h3>
+            <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white" aria-label="닫기">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <section class="flex items-center justify-between gap-3 bg-[#0b0e14] border border-slate-800 rounded-xl p-4">
+            <div>
+                <h4 class="text-sm font-extrabold text-white">업데이트 알림</h4>
+                <p class="text-xs text-slate-400 mt-0.5">코드를 수정한 뒤 접속 중인 참가자들의 화면에 새로고침 배너를 띄웁니다.</p>
+            </div>
+            <button
+                onclick="openBroadcastModal()"
+                class="shrink-0 whitespace-nowrap px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold"
+            >
+                <i class="fa-solid fa-bullhorn mr-1"></i> 알림 보내기
+            </button>
+        </section>
+
+        <section class="flex flex-col gap-2 min-h-0">
+            <div>
+                <h4 class="text-sm font-extrabold text-white">
+                    참가자 계좌 관리 (<span id="adminAccountCount">0</span>명)
+                </h4>
+                <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                    <strong class="text-slate-300">초기화</strong>는 현금 5,000만 원·보유 주식 없음으로 되돌립니다.
+                    <strong class="text-slate-300">삭제</strong>는 계좌와 닉네임을 지우며, 같은 Google 계정으로 다시 로그인하면 닉네임부터 새로 정합니다.
+                    두 작업 모두 되돌릴 수 없습니다.
+                </p>
+            </div>
+            <div class="scroll-fade min-h-0 flex flex-col" data-fade="xy">
+                <div class="overflow-auto min-h-0 border border-slate-800 rounded-xl" data-fade-scroller>
+                    <table class="w-full text-left border-collapse whitespace-nowrap text-xs">
+                        <thead>
+                            <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
+                                <th class="py-2 px-3 font-bold">닉네임</th>
+                                <th class="py-2 px-3 font-bold text-right">총 평가자산</th>
+                                <th class="py-2 px-3 font-bold text-right">보유 현금</th>
+                                <th class="py-2 px-3 font-bold text-right">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminAccountRows" class="divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
 <div id="broadcastModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4">
     <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
         <div class="flex items-center justify-between">
@@ -2106,9 +2310,13 @@
             </div>
         </div>
         <div class="bg-[#0b0e14] border border-slate-800 rounded-xl p-4 text-xs text-slate-300 leading-relaxed space-y-1">
-            <p>&copy; 2026. 박기환, 김민준</p>
+            <p>Copyright &copy; 2026. 박기환, 김민준</p>
             <p>All rights reserved.</p>
             <p>Version <span id="appVersionText"></span></p>
+            <p>
+                Contact:
+                <a href="mailto:kimminjoon1205@gmail.com" class="text-blue-400 hover:underline">kimminjoon1205@gmail.com</a>
+            </p>
         </div>
     </div>
 </div>
@@ -2235,6 +2443,7 @@
         'unavailable': '서버에 연결할 수 없습니다. 네트워크를 확인해 주세요.'
     };
     const SILENT_AUTH_ERRORS = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
+    const ADMIN_EMAIL = 'kimminjoon1205@gmail.com';
 
     function getTickSize(price) {
         if (price < 2000) return 1;
@@ -2423,6 +2632,7 @@
     let tradeBusy = false;
     let loginBusy = false;
     let profileBusy = false;
+    let adminBusy = false;
     let authUser = null;
     let profileNeeded = false;
 
@@ -2649,6 +2859,7 @@
 
     function onAccountsChanged() {
         refreshAllViews();
+        renderAdminPanel();
     }
 
     function handleRemoteVersion(version, note) {
@@ -2683,7 +2894,14 @@
             snap.forEach(d => {
                 next[d.id] = normalizeAccount(d.id, d.data());
             });
+            const hadAccount = Boolean(authUser && accounts[authUser.uid]);
             accounts = next;
+            if (authUser) {
+                profileNeeded = !next[authUser.uid];
+                if (hadAccount && profileNeeded) {
+                    showToast('관리자가 계좌를 삭제했습니다. 닉네임을 다시 정하면 새로 시작할 수 있어요.', 'error');
+                }
+            }
             setSyncStatus('cloud');
             onAccountsChanged();
         }, err => {
@@ -2697,7 +2915,14 @@
         }, err => console.error('Config sync error:', err));
 
         authSdk.onAuthStateChanged(auth, async user => {
-            authUser = user ? { uid: user.uid, displayName: user.displayName || '' } : null;
+            authUser = user
+                ? {
+                    uid: user.uid,
+                    displayName: user.displayName || '',
+                    email: (user.email || '').toLowerCase(),
+                    emailVerified: user.emailVerified
+                }
+                : null;
             currentAccountId = user ? user.uid : null;
             profileNeeded = false;
             onAccountsChanged();
@@ -2766,6 +2991,26 @@
                     ownBroadcastVersion = next;
                     tx.set(configRef, { version: next, note, updatedAt: Date.now() });
                     return next;
+                });
+            },
+            async adminResetAccount(uid) {
+                await runTransaction(db, async tx => {
+                    const ref = accountRef(uid);
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) throw new Error('이미 삭제된 계좌입니다.');
+                    tx.update(ref, { cash: INITIAL_CASH, holdings: {}, updatedAt: Date.now() });
+                });
+            },
+            async adminDeleteAccount(uid) {
+                await runTransaction(db, async tx => {
+                    const ref = accountRef(uid);
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) throw new Error('이미 삭제된 계좌입니다.');
+                    const nickname = snap.data().nickname;
+                    tx.delete(ref);
+                    if (typeof nickname === 'string' && nickname) {
+                        tx.delete(doc(db, 'nicknames', nickname));
+                    }
                 });
             }
         };
@@ -2852,11 +3097,22 @@
         };
     }
 
+    function isAdmin() {
+        return Boolean(authUser && authUser.emailVerified && authUser.email === ADMIN_EMAIL);
+    }
+
     function renderNavbarAccount() {
         const box = document.getElementById('loggedInUserBox');
         const loginBtn = document.getElementById('loginOpenBtn');
         const badge = document.getElementById('orderUserBadge');
+        const adminBtn = document.getElementById('adminOpenBtn');
         const acc = getCurrentAccount();
+
+        adminBtn.classList.toggle('hidden', !isAdmin());
+        adminBtn.classList.toggle('flex', isAdmin());
+        if (!isAdmin()) {
+            closeAdminModal();
+        }
 
         if (acc) {
             const { total } = getAccountTotalValue(acc);
@@ -3569,9 +3825,8 @@
     };
 
     window.openBroadcastModal = function() {
-        if (!getCurrentAccount()) {
-            showToast('업데이트 알림은 로그인한 참가자만 보낼 수 있습니다.', 'error');
-            window.handleLoginButton();
+        if (!isAdmin()) {
+            showToast('업데이트 알림은 관리자만 보낼 수 있습니다.', 'error');
             return;
         }
         const modal = document.getElementById('broadcastModal');
@@ -3584,6 +3839,123 @@
         modal.classList.add('hidden');
         modal.classList.remove('flex');
     };
+
+    function isAdminModalOpen() {
+        return !document.getElementById('adminModal').classList.contains('hidden');
+    }
+
+    window.openAdminModal = function() {
+        if (!isAdmin()) {
+            showToast('관리자만 사용할 수 있습니다.', 'error');
+            return;
+        }
+        const modal = document.getElementById('adminModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        renderAdminPanel();
+    };
+
+    function closeAdminModal() {
+        const modal = document.getElementById('adminModal');
+        if (modal.classList.contains('hidden')) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    window.closeAdminModal = closeAdminModal;
+
+    function createAdminActionButton(label, action, accountId, colorClass) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.action = action;
+        btn.dataset.id = accountId;
+        btn.className = `px-2.5 py-1 rounded-md text-[11px] font-bold border transition disabled:opacity-50 ${colorClass}`;
+        btn.textContent = label;
+        btn.disabled = adminBusy;
+        return btn;
+    }
+
+    function renderAdminPanel() {
+        if (!isAdminModalOpen()) return;
+        const tbody = document.getElementById('adminAccountRows');
+        const list = Object.values(accounts)
+            .map(acc => ({ ...acc, total: getAccountTotalValue(acc).total }))
+            .sort((a, b) => a.nickname.localeCompare(b.nickname, 'ko'));
+
+        document.getElementById('adminAccountCount').textContent = list.length.toLocaleString();
+
+        if (list.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="py-6 text-center text-slate-400">등록된 참가자가 없습니다.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.replaceChildren(...list.map(acc => {
+            const tr = document.createElement('tr');
+
+            const nameTd = document.createElement('td');
+            nameTd.className = 'py-2 px-3 font-bold text-white';
+            nameTd.textContent = acc.nickname;
+            if (acc.id === currentAccountId) {
+                const me = document.createElement('span');
+                me.className = 'ml-1.5 text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded';
+                me.textContent = '나';
+                nameTd.appendChild(me);
+            }
+
+            const totalTd = document.createElement('td');
+            totalTd.className = 'py-2 px-3 text-right text-slate-200';
+            totalTd.textContent = `${acc.total.toLocaleString()}원`;
+
+            const cashTd = document.createElement('td');
+            cashTd.className = 'py-2 px-3 text-right text-slate-400';
+            cashTd.textContent = `${acc.cash.toLocaleString()}원`;
+
+            const actionTd = document.createElement('td');
+            actionTd.className = 'py-2 px-3 text-right';
+            const actions = document.createElement('div');
+            actions.className = 'inline-flex gap-1.5';
+            actions.append(
+                createAdminActionButton('초기화', 'reset', acc.id, 'border-amber-500/40 text-amber-300 hover:bg-amber-500/10'),
+                createAdminActionButton('삭제', 'delete', acc.id, 'border-rose-500/40 text-rose-300 hover:bg-rose-500/10')
+            );
+            actionTd.appendChild(actions);
+
+            tr.append(nameTd, totalTd, cashTd, actionTd);
+            return tr;
+        }));
+    }
+
+    async function handleAdminAction(action, accountId) {
+        if (adminBusy || !backend || !isAdmin()) return;
+        const acc = accounts[accountId];
+        if (!acc) return;
+
+        const message = action === 'reset'
+            ? `[${acc.nickname}] 계좌를 초기화할까요?\n현금 5,000만 원, 보유 주식 없음으로 되돌리며 되돌릴 수 없습니다.`
+            : `[${acc.nickname}] 계좌를 삭제할까요?\n계좌와 닉네임이 지워지며 되돌릴 수 없습니다.`;
+        if (!window.confirm(message)) return;
+
+        adminBusy = true;
+        renderAdminPanel();
+        try {
+            if (action === 'reset') {
+                await backend.adminResetAccount(accountId);
+                showToast(`[${acc.nickname}] 계좌를 초기화했습니다.`, 'info');
+            } else {
+                await backend.adminDeleteAccount(accountId);
+                showToast(`[${acc.nickname}] 계좌를 삭제했습니다.`, 'info');
+            }
+        } catch (err) {
+            showToast(describeError(err), 'error');
+        } finally {
+            adminBusy = false;
+            renderAdminPanel();
+        }
+    }
 
     function getAppVersion() {
         const meta = document.querySelector('meta[name="app-version"]');
@@ -3604,7 +3976,7 @@
     };
 
     window.triggerBroadcastUpdate = async function() {
-        if (!backend) return;
+        if (!backend || !isAdmin()) return;
         const note = document.getElementById('updateNoteInput').value.trim().slice(0, 100) || '새로운 버전 업데이트';
         const btn = document.getElementById('broadcastSubmitBtn');
         btn.disabled = true;
@@ -3639,6 +4011,68 @@
             el.classList.add('opacity-0', 'translate-y-2');
             setTimeout(() => el.remove(), 300);
         }, 2800);
+    }
+
+    function createFadeEdge(parent, side, extraClass) {
+        const edge = document.createElement('div');
+        edge.className = `${extraClass} fade-${side}`;
+        edge.setAttribute('aria-hidden', 'true');
+        parent.appendChild(edge);
+        return edge;
+    }
+
+    function updateFadeEdges(edges, scroller) {
+        const show = {
+            top: scroller.scrollTop > 1,
+            bottom: scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1,
+            left: scroller.scrollLeft > 1,
+            right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1
+        };
+        Object.entries(edges).forEach(([side, edge]) => {
+            edge.classList.toggle('is-visible', show[side]);
+        });
+    }
+
+    function watchScroller(scroller, edges, scrollTarget) {
+        let frame = 0;
+        const update = () => {
+            if (frame) return;
+            frame = requestAnimationFrame(() => {
+                frame = 0;
+                updateFadeEdges(edges, scroller);
+            });
+        };
+        scrollTarget.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update);
+        new ResizeObserver(update).observe(scroller === document.scrollingElement ? document.body : scroller);
+        new MutationObserver(update).observe(scroller === document.scrollingElement ? document.body : scroller, {
+            childList: true,
+            subtree: true
+        });
+        update();
+    }
+
+    function setupScrollFades() {
+        document.querySelectorAll('.scroll-fade').forEach(wrapper => {
+            const scroller = wrapper.querySelector('[data-fade-scroller]');
+            if (!scroller) return;
+            const axes = wrapper.dataset.fade || 'y';
+            const sides = [
+                ...(axes.includes('y') ? ['top', 'bottom'] : []),
+                ...(axes.includes('x') ? ['left', 'right'] : [])
+            ];
+            const edges = {};
+            sides.forEach(side => {
+                edges[side] = createFadeEdge(wrapper, side, 'fade-edge');
+            });
+            watchScroller(scroller, edges, scroller);
+        });
+
+        const pageEdges = {
+            top: createFadeEdge(document.body, 'top', 'page-fade'),
+            bottom: createFadeEdge(document.body, 'bottom', 'page-fade')
+        };
+        watchScroller(document.scrollingElement, pageEdges, window);
     }
 
     let deferredInstallPrompt = null;
@@ -3691,6 +4125,13 @@
             e.preventDefault();
             submitProfile();
         });
+
+        document.getElementById('adminAccountRows').addEventListener('click', e => {
+            const btn = e.target.closest('button[data-action]');
+            if (btn && !btn.disabled) handleAdminAction(btn.dataset.action, btn.dataset.id);
+        });
+
+        setupScrollFades();
 
         window.addEventListener('resize', () => {
             if (currentScreen === 'TRADE') drawCandleChart();
