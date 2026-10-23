@@ -6,15 +6,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function adminNicknames() {
+      return {
+        'kimminjoon1205@gmail.com': 'master',
+        'admin@admin.com': 'admin'
+      };
+    }
+
     function isAdmin() {
       return signedIn()
-        && request.auth.token.email == 'kimminjoon1205@gmail.com'
-        && request.auth.token.email_verified == true;
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in adminNicknames();
+    }
+
+    function myAdminNickname() {
+      return adminNicknames()[request.auth.token.email];
     }
 
     function validNickname(n) {
       return n is string && n.size() >= 1 && n.size() <= 20
-        && (n.lower() != 'admin' || isAdmin());
+        && (!(n.lower() in ['master', 'admin']) || (isAdmin() && n == myAdminNickname()));
     }
 
     function priceLimits() {
@@ -71,6 +82,12 @@ service cloud.firestore {
         && !exists(/databases/$(database)/documents/accounts/$(request.auth.uid))
         && getAfter(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.nickname == name;
 
+      allow create: if isAdmin()
+        && name == myAdminNickname()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.nickname == name;
+
       allow update: if false;
 
       allow delete: if isAdmin();
@@ -94,6 +111,12 @@ service cloud.firestore {
         && request.resource.data.updatedAt is number
         && marketOpen()
         && validTrade(resource.data, request.resource.data);
+
+      allow update: if isAdmin()
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'updatedAt'])
+        && request.resource.data.nickname == myAdminNickname()
+        && getAfter(/databases/$(database)/documents/nicknames/$(request.resource.data.nickname)).data.uid == uid;
 
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'updatedAt'])

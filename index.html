@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.14">
+    <meta name="app-version" content="1.0.15">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -2295,7 +2295,7 @@
         <section class="flex items-center justify-between gap-3 bg-[#0b0e14] border border-slate-800 rounded-xl p-4">
             <div>
                 <h4 class="text-sm font-extrabold text-white">관리자 계좌 순위 숨기기</h4>
-                <p class="text-xs text-slate-400 mt-0.5">켜면 모든 참가자의 리더보드에서 관리자 계좌가 빠지고 순위가 다시 매겨집니다.</p>
+                <p class="text-xs text-slate-400 mt-0.5">켜면 모든 참가자의 리더보드에서 관리자 계좌(master, admin)가 빠지고 순위가 다시 매겨집니다.</p>
             </div>
             <input
                 type="checkbox"
@@ -2537,8 +2537,12 @@
         'unavailable': '서버에 연결할 수 없습니다. 네트워크를 확인해 주세요.'
     };
     const SILENT_AUTH_ERRORS = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
-    const ADMIN_EMAIL = 'kimminjoon1205@gmail.com';
-    const ADMIN_NICKNAME = 'admin';
+    // 관리자 이메일 → 관리자 전용 닉네임. firestore.rules 의 adminNicknames() 와 같아야 합니다.
+    const ADMIN_NICKNAMES = {
+        'kimminjoon1205@gmail.com': 'master',
+        'admin@admin.com': 'admin'
+    };
+    const RESERVED_NICKNAMES = Object.values(ADMIN_NICKNAMES);
 
     function getTickSize(price) {
         if (price < 2000) return 1;
@@ -2877,7 +2881,7 @@
     function validateNickname(nickname) {
         if (!nickname) return '닉네임을 입력해 주세요! (예: 주식왕, 홍길동)';
         if ([...nickname].length > 10) return '닉네임은 10자 이하로 입력해 주세요.';
-        if (nickname.toLowerCase() === ADMIN_NICKNAME && !isAdmin()) return '관리자 전용 닉네임이라 사용할 수 없어요.';
+        if (RESERVED_NICKNAMES.includes(nickname.toLowerCase()) && nickname !== myAdminNickname()) return '관리자 전용 닉네임이라 사용할 수 없어요.';
         if (new TextEncoder().encode(nickname).length > 30) return '닉네임이 너무 깁니다. 이모지 등 특수문자를 줄여 주세요.';
         if (/[\u0000-\u001f\u007f/]/.test(nickname) || /^\.{1,2}$/.test(nickname) || /^__.*__$/.test(nickname)) {
             return '닉네임에 사용할 수 없는 문자가 있습니다.';
@@ -2987,6 +2991,27 @@
 
         const accountRef = uid => doc(db, 'accounts', uid);
 
+        // 관리자 계좌의 닉네임을 관리자 전용 닉네임으로 바꿉니다. (예: 기존 admin → master)
+        async function renameAdminAccount(uid, nickname) {
+            await runTransaction(db, async tx => {
+                const ref = accountRef(uid);
+                const accSnap = await tx.get(ref);
+                const newNickRef = doc(db, 'nicknames', nickname);
+                const newNickSnap = await tx.get(newNickRef);
+                if (!accSnap.exists()) return;
+                const oldNickname = accSnap.data().nickname;
+                if (oldNickname === nickname) return;
+                if (newNickSnap.exists() && newNickSnap.data().uid !== uid) {
+                    throw new Error(`닉네임 ${nickname} 을(를) 이미 다른 계좌가 쓰고 있습니다.`);
+                }
+                const oldNickRef = typeof oldNickname === 'string' && oldNickname ? doc(db, 'nicknames', oldNickname) : null;
+                const oldNickSnap = oldNickRef ? await tx.get(oldNickRef) : null;
+                if (!newNickSnap.exists()) tx.set(newNickRef, { uid });
+                tx.update(ref, { nickname, updatedAt: Date.now() });
+                if (oldNickSnap && oldNickSnap.exists() && oldNickSnap.data().uid === uid) tx.delete(oldNickRef);
+            });
+        }
+
         onSnapshot(collection(db, 'accounts'), snap => {
             const next = {};
             snap.forEach(d => {
@@ -3043,6 +3068,8 @@
                     profileNeeded = true;
                     onAccountsChanged();
                     promptProfile();
+                } else if (snap.exists() && isAdmin() && snap.data().nickname !== myAdminNickname()) {
+                    await renameAdminAccount(user.uid, myAdminNickname());
                 }
             } catch (err) {
                 console.error('Profile check error:', err);
@@ -3210,7 +3237,11 @@
     }
 
     function isAdmin() {
-        return Boolean(authUser && authUser.emailVerified && authUser.email === ADMIN_EMAIL);
+        return Boolean(authUser && authUser.emailVerified && Object.hasOwn(ADMIN_NICKNAMES, authUser.email));
+    }
+
+    function myAdminNickname() {
+        return isAdmin() ? ADMIN_NICKNAMES[authUser.email] : null;
     }
 
     function renderNavbarAccount() {
@@ -3280,8 +3311,8 @@
 
     function renderLeaderboard() {
         const tbody = document.getElementById('leaderboardTableBody');
-        const hiddenId = rankingSettings.hideAdmin ? rankingSettings.adminUid : null;
-        const list = Object.values(accounts).filter(acc => acc.id !== hiddenId).map(acc => {
+        const isHidden = acc => rankingSettings.hideAdmin && RESERVED_NICKNAMES.includes(acc.nickname.toLowerCase());
+        const list = Object.values(accounts).filter(acc => !isHidden(acc)).map(acc => {
             const { cash, stockEval, total } = getAccountTotalValue(acc);
             const rate = ((total - INITIAL_CASH) / INITIAL_CASH) * 100;
             return { id: acc.id, nickname: acc.nickname, cash, stockEval, total, rate };
@@ -3911,7 +3942,7 @@
 
     // 관리자는 닉네임을 묻지 않고 바로 admin 계좌를 만듭니다.
     function promptProfile() {
-        if (isAdmin()) createAccount(ADMIN_NICKNAME);
+        if (isAdmin()) createAccount(myAdminNickname());
         else openProfileModal();
     }
 
