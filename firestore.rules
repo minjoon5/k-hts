@@ -22,6 +22,53 @@ service cloud.firestore {
     }
 
     // 본인이 관리자인지만 확인할 수 있고, 다른 사람의 관리자 여부는 볼 수 없습니다.
+    // 종목별 [하한가, 상한가]. index.html 의 COMPANY_META 기준가와 getPriceLimits 결과와 같아야 합니다.
+    function priceLimits() {
+      return {
+        'A': [35000, 105000],
+        'B': [60000, 180000],
+        'C': [22500, 67500],
+        'D': [42500, 127500],
+        'E': [27500, 82500],
+        'F': [16000, 48000],
+        'G': [32000, 96000],
+        'H': [47500, 142500],
+        'I': [14000, 42000],
+        'J': [24000, 72000]
+      };
+    }
+
+    // 장 마감(KST 00:00~05:59 = UTC 15:00~20:59)에는 거래할 수 없습니다.
+    function marketOpen() {
+      return request.time.hours() < 15 || request.time.hours() >= 21;
+    }
+
+    function validTrade(before, after) {
+      let t = after.lastTrade;
+      let id = t.stock;
+      let lim = priceLimits()[id];
+      let oldQty = before.holdings.get(id, {'qty': 0}).qty;
+      let h = after.holdings.get(id, null);
+      let newQty = h == null ? 0 : h.qty;
+      return t is map
+        && t.keys().hasAll(['stock', 'side', 'qty', 'price'])
+        && t.keys().hasOnly(['stock', 'side', 'qty', 'price'])
+        && id in priceLimits()
+        && t.qty is int && t.qty > 0
+        && t.price is int && t.price >= lim[0] && t.price <= lim[1]
+        && after.holdings is map
+        && after.holdings.diff(before.holdings).affectedKeys().hasOnly([id])
+        && (h == null || (
+          h.keys().hasOnly(['qty', 'avgPrice'])
+          && h.qty is int && h.qty > 0
+          && h.avgPrice is number && h.avgPrice >= lim[0] - 1 && h.avgPrice <= lim[1] + 1))
+        && after.cash is int && after.cash >= 0
+        && (
+          (t.side == 'BUY' && newQty == oldQty + t.qty && after.cash == before.cash - t.qty * t.price)
+          || (t.side == 'SELL' && newQty == oldQty - t.qty && after.cash == before.cash + t.qty * t.price)
+        );
+    }
+
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
@@ -54,13 +101,13 @@ service cloud.firestore {
         && request.resource.data.holdings.size() == 0
         && getAfter(/databases/$(database)/documents/nicknames/$(request.resource.data.nickname)).data.uid == uid;
 
+      // 본인 거래: lastTrade 에 적힌 한 건의 매수/매도만큼만 현금과 보유 수량이 바뀌어야 합니다.
       allow update: if signedIn()
         && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'updatedAt'])
-        && request.resource.data.cash is number
-        && request.resource.data.cash >= 0
-        && request.resource.data.holdings is map
-        && request.resource.data.holdings.keys().hasOnly(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'lastTrade', 'updatedAt'])
+        && request.resource.data.updatedAt is number
+        && marketOpen()
+        && validTrade(resource.data, request.resource.data);
 
       // 관리자 초기화: 현금 5,000만 원, 보유 주식 없음으로만 되돌릴 수 있습니다.
       allow update: if isAdmin()
