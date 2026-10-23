@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.13">
+    <meta name="app-version" content="1.0.14">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -2537,6 +2537,7 @@
         'unavailable': '서버에 연결할 수 없습니다. 네트워크를 확인해 주세요.'
     };
     const SILENT_AUTH_ERRORS = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
+    const ADMIN_EMAIL = 'kimminjoon1205@gmail.com';
     const ADMIN_NICKNAME = 'admin';
 
     function getTickSize(price) {
@@ -2729,7 +2730,6 @@
     let adminBusy = false;
     let rankingSettings = { hideAdmin: false, adminUid: null };
     let authUser = null;
-    let adminFlag = false;
     let profileNeeded = false;
 
     function buildMarket(nowMs) {
@@ -3032,18 +3032,10 @@
                 : null;
             currentAccountId = user ? user.uid : null;
             profileNeeded = false;
-            adminFlag = false;
             onAccountsChanged();
             if (!user) {
                 closeProfileModal();
                 return;
-            }
-            try {
-                // 관리자 여부는 Firestore의 admins/{uid} 문서로 판별합니다. (본인 문서만 읽을 수 있음)
-                const adminSnap = await getDoc(doc(db, 'admins', user.uid));
-                if (authUser && authUser.uid === user.uid) adminFlag = adminSnap.exists();
-            } catch (err) {
-                adminFlag = false;
             }
             try {
                 const snap = await getDoc(accountRef(user.uid));
@@ -3218,7 +3210,7 @@
     }
 
     function isAdmin() {
-        return Boolean(authUser && adminFlag);
+        return Boolean(authUser && authUser.emailVerified && authUser.email === ADMIN_EMAIL);
     }
 
     function renderNavbarAccount() {
@@ -4082,7 +4074,7 @@
             showToast(hide ? '관리자 계좌를 순위에서 숨겼습니다.' : '관리자 계좌를 순위에 다시 표시합니다.', 'info');
         } catch (err) {
             const msg = err && err.code === 'permission-denied'
-                ? 'Firestore 보안 규칙이 관리자 권한을 허용하지 않습니다. 최신 firestore.rules 가 게시되어 있는지, admins 컬렉션에 관리자 UID 문서가 있는지 확인해 주세요.'
+                ? 'Firestore 보안 규칙이 관리자 권한을 허용하지 않습니다. 저장소의 firestore.rules 를 Firebase 콘솔 규칙에 게시해 주세요.'
                 : describeError(err);
             showToast(msg, 'error');
         } finally {
@@ -4113,7 +4105,7 @@
             }
         } catch (err) {
             const msg = err && err.code === 'permission-denied'
-                ? 'Firestore 보안 규칙이 관리자 권한을 허용하지 않습니다. 최신 firestore.rules 가 게시되어 있는지, admins 컬렉션에 관리자 UID 문서가 있는지 확인해 주세요.'
+                ? 'Firestore 보안 규칙이 관리자 권한을 허용하지 않습니다. 저장소의 firestore.rules 를 Firebase 콘솔 규칙에 게시해 주세요.'
                 : describeError(err);
             showToast(msg, 'error');
         } finally {
