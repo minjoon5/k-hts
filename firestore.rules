@@ -9,7 +9,7 @@ service cloud.firestore {
     function adminNicknames() {
       return {
         'kimminjoon1205@gmail.com': 'master',
-        'smash0104@gmail.com': 'admin'
+        '0104.smash@gmail.com': 'admin'
       };
     }
 
