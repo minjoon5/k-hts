@@ -1,26 +1,22 @@
 rules_version = '2';
 
-// Firebase 콘솔 > Firestore Database > 규칙 탭에 그대로 붙여넣고 [게시]하세요.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
       return request.auth != null;
     }
 
-    // index.html 의 ADMIN_EMAIL 과 같아야 합니다.
     function isAdmin() {
       return signedIn()
         && request.auth.token.email == 'kimminjoon1205@gmail.com'
         && request.auth.token.email_verified == true;
     }
 
-    // 'admin' 닉네임(대소문자 무관)은 관리자만 쓸 수 있습니다.
     function validNickname(n) {
       return n is string && n.size() >= 1 && n.size() <= 20
         && (n.lower() != 'admin' || isAdmin());
     }
 
-    // 종목별 [하한가, 상한가]. index.html 의 COMPANY_META 기준가와 getPriceLimits 결과와 같아야 합니다.
     function priceLimits() {
       return {
         'A': [35000, 105000],
@@ -36,7 +32,6 @@ service cloud.firestore {
       };
     }
 
-    // 장 마감(KST 00:00~05:59 = UTC 15:00~20:59)에는 거래할 수 없습니다.
     function marketOpen() {
       return request.time.hours() < 15 || request.time.hours() >= 21;
     }
@@ -78,7 +73,6 @@ service cloud.firestore {
 
       allow update: if false;
 
-      // 관리자가 계좌를 삭제할 때 닉네임도 함께 지웁니다.
       allow delete: if isAdmin();
     }
 
@@ -94,7 +88,6 @@ service cloud.firestore {
         && request.resource.data.holdings.size() == 0
         && getAfter(/databases/$(database)/documents/nicknames/$(request.resource.data.nickname)).data.uid == uid;
 
-      // 본인 거래: lastTrade 에 적힌 한 건의 매수/매도만큼만 현금과 보유 수량이 바뀌어야 합니다.
       allow update: if signedIn()
         && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'lastTrade', 'updatedAt'])
@@ -102,18 +95,15 @@ service cloud.firestore {
         && marketOpen()
         && validTrade(resource.data, request.resource.data);
 
-      // 관리자 초기화: 현금 5,000만 원, 보유 주식 없음으로만 되돌릴 수 있습니다.
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'updatedAt'])
         && request.resource.data.cash == 50000000
         && request.resource.data.holdings is map
         && request.resource.data.holdings.size() == 0;
 
-      // 관리자 삭제
       allow delete: if isAdmin();
     }
 
-    // 업데이트 알림은 관리자만 보낼 수 있습니다.
     match /system/config {
       allow read: if true;
 
@@ -130,7 +120,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // 관리자 전용 설정: 관리자 계좌 순위 숨기기
     match /system/settings {
       allow read: if true;
 
