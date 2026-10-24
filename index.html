@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.1.0">
+    <meta name="app-version" content="1.1.1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -2107,6 +2107,25 @@
             <div id="maValueLegend" class="flex flex-wrap items-center gap-2 font-mono text-[11px]"></div>
         </div>
 
+        <div
+            class="bg-[#0b0e14] px-3.5 py-1.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px]"
+        >
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-slate-400 font-bold mr-1">
+                    <i class="fa-solid fa-pen-ruler mr-1 text-amber-400"></i>작도:
+                </span>
+                <button onclick="setDrawTool('NONE')" id="drawBtn_NONE" class="px-2 py-0.5 rounded border text-[11px] font-bold transition">기본커서</button>
+                <button onclick="setDrawTool('TREND')" id="drawBtn_TREND" class="px-2 py-0.5 rounded border text-[11px] font-bold transition">추세선(선분)</button>
+                <button onclick="setDrawTool('RAY')" id="drawBtn_RAY" class="px-2 py-0.5 rounded border text-[11px] font-bold transition">반직선</button>
+                <button onclick="setDrawTool('HLINE')" id="drawBtn_HLINE" class="px-2 py-0.5 rounded border text-[11px] font-bold transition">수평선(기울기0)</button>
+                <button onclick="setDrawTool('VLINE')" id="drawBtn_VLINE" class="px-2 py-0.5 rounded border text-[11px] font-bold transition">수직선</button>
+                <span class="text-slate-700 mx-0.5">|</span>
+                <button onclick="undoLastDrawing()" class="px-2 py-0.5 rounded border border-slate-700 text-slate-300 hover:bg-slate-800 font-bold">실행취소</button>
+                <button onclick="clearDrawings()" class="px-2 py-0.5 rounded border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 font-bold">전체삭제</button>
+            </div>
+            <span id="drawToolHint" class="text-[11px] text-amber-400 font-semibold">도구를 선택해 차트 위에 보조선·추세선을 그리세요</span>
+        </div>
+
         <div id="chartContainer" class="relative flex-1 min-h-[320px] bg-[#0b0e14] w-full overflow-hidden">
             <canvas id="stockCandleCanvas" class="absolute inset-0 w-full h-full block"></canvas>
         </div>
@@ -2886,6 +2905,18 @@
     let activeMAs = { 5: true, 10: false, 20: true, 60: false, 120: false };
     let activeIndicators = { bb: false, vol: true, rsi: false };
 
+    // 작도한 선은 종목·봉 단위별로 저장합니다. 점의 idx는 봉 단위별 절대 위치라 날이 바뀌어도 같은 봉을 가리킵니다.
+    const LS_DRAWINGS = 'khts.drawings.v1';
+    const DRAW_TOOLS = ['NONE', 'TREND', 'RAY', 'HLINE', 'VLINE'];
+    let chartDrawings = (() => {
+        const raw = lsGet(LS_DRAWINGS, {});
+        return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    })();
+    let currentDrawTool = 'NONE';
+    let draftStartPt = null;
+    let hoverChartPt = null;
+    let lastChartMetrics = null;
+
     let localSystemVersion = null;
     let ownBroadcastVersion = null;
     let tradeBusy = false;
@@ -3041,6 +3072,15 @@
             const d = new Date(c.day * DAY_MS);
             return d.getUTCFullYear() * 12 + d.getUTCMonth();
         });
+    }
+
+    // 분봉은 최근 며칠치만 들고 있어 0번 봉이 매일 바뀌므로, 상장일 기준 절대 위치로 바꿀 때 더할 값을 구합니다.
+    function getTimeframeBaseIndex(st, tf) {
+        const perDay = { '5m': 1, '15m': 3, '30m': 6 }[tf];
+        if (!perDay) return 0;
+        const first = st.prevBuckets[0] || st.session.buckets[0];
+        if (!first) return 0;
+        return (first.day - EPOCH_DAY) * Math.ceil(SESSION_STEPS / BUCKET_STEPS / perDay);
     }
 
     function validateNickname(nickname) {
@@ -3897,6 +3937,7 @@
         document.getElementById('maValueLegend').innerHTML = legendHtml.join('');
 
         ctx.font = "12px 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+        lastChartMetrics = null;
         if (candles.length === 0) {
             ctx.fillStyle = '#64748b';
             ctx.textAlign = 'center';
@@ -3951,6 +3992,8 @@
         const slots = Math.max(candles.length, 40);
         const stepW = plotW / slots;
         const bodyW = Math.max(3, Math.min(16, stepW * 0.65));
+        const baseIdx = getTimeframeBaseIndex(st, selectedTimeframe) + startOffset;
+        lastChartMetrics = { padLeft, padTop, plotW, plotH, minP, maxP, stepW, baseIdx };
 
         if (bbSeries && bbSeries.length > 1) {
             ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
@@ -4023,6 +4066,72 @@
         ctx.fillRect(padLeft + plotW + 2, yNow - 9, padRight - 4, 18);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(st.price.toLocaleString(), padLeft + plotW + 8, yNow + 4);
+
+        const savedLines = chartDrawings[`${selectedStockId}_${selectedTimeframe}`] || [];
+        const allLines = [...savedLines];
+        if (currentDrawTool !== 'NONE' && hoverChartPt) {
+            if (currentDrawTool === 'HLINE' || currentDrawTool === 'VLINE') {
+                allLines.push({ type: currentDrawTool, p1: hoverChartPt, preview: true });
+            } else if (draftStartPt) {
+                allLines.push({ type: currentDrawTool, p1: draftStartPt, p2: hoverChartPt, preview: true });
+            }
+        }
+        const idxToX = i => padLeft + (i - baseIdx) * stepW + stepW / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(padLeft, padTop, plotW, plotH);
+        ctx.clip();
+        allLines.forEach(ln => {
+            ctx.strokeStyle = ln.preview ? '#fbbf24' : '#38bdf8';
+            ctx.lineWidth = ln.preview ? 1.5 : 2;
+            ctx.setLineDash(ln.preview ? [4, 4] : []);
+            if (ln.type === 'HLINE') {
+                const y = toY(ln.p1.price);
+                ctx.beginPath();
+                ctx.moveTo(padLeft, y);
+                ctx.lineTo(padLeft + plotW, y);
+                ctx.stroke();
+            } else if (ln.type === 'VLINE') {
+                const x = idxToX(ln.p1.idx);
+                ctx.beginPath();
+                ctx.moveTo(x, padTop);
+                ctx.lineTo(x, padTop + plotH);
+                ctx.stroke();
+            } else if ((ln.type === 'TREND' || ln.type === 'RAY') && ln.p2) {
+                const x1 = idxToX(ln.p1.idx), y1 = toY(ln.p1.price);
+                let x2 = idxToX(ln.p2.idx), y2 = toY(ln.p2.price);
+                if (ln.type === 'RAY') {
+                    // 시작점에서 방향점 쪽으로 화면 밖까지 늘립니다.
+                    const len = Math.hypot(x2 - x1, y2 - y1);
+                    const scale = len > 0 ? (plotW + plotH) * 2 / len : 1;
+                    x2 = x1 + (x2 - x1) * scale;
+                    y2 = y1 + (y2 - y1) * scale;
+                }
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(x1, y1, 3, 0, Math.PI * 2);
+                if (ln.type === 'TREND') {
+                    ctx.moveTo(x2 + 3, y2);
+                    ctx.arc(x2, y2, 3, 0, Math.PI * 2);
+                }
+                ctx.fill();
+            }
+        });
+        ctx.restore();
+        ctx.setLineDash([]);
+        allLines.filter(ln => ln.type === 'HLINE').forEach(ln => {
+            const y = toY(ln.p1.price);
+            if (y < padTop || y > padTop + plotH) return;
+            ctx.fillStyle = ln.preview ? '#b45309' : '#0284c7';
+            ctx.fillRect(padLeft + plotW + 2, y - 8, padRight - 4, 16);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(Math.round(ln.p1.price).toLocaleString(), padLeft + plotW + 6, y + 4);
+        });
 
         let subTop = padTop + plotH + subGap;
         if (activeIndicators.vol) {
@@ -4276,6 +4385,7 @@
 
     window.openCompanyTrade = function(stockId) {
         selectedStockId = stockId;
+        draftStartPt = null;
         document.getElementById('inputOrderPrice').value = stocks[stockId].price;
         document.getElementById('inputOrderQty').value = 1;
         window.switchScreen('TRADE');
@@ -4283,6 +4393,8 @@
 
     window.selectTimeframe = function(tf) {
         selectedTimeframe = tf;
+        draftStartPt = null;
+        renderDrawToolButtons();
         TIMEFRAMES.forEach(item => {
             const btn = document.getElementById(`tfBtn_${item}`);
             if (item === tf) {
@@ -4805,6 +4917,102 @@
         });
     }
 
+    window.setDrawTool = function(tool) {
+        currentDrawTool = tool;
+        draftStartPt = null;
+        hoverChartPt = null;
+        renderDrawToolButtons();
+        drawCandleChart();
+    };
+
+    function renderDrawToolButtons() {
+        DRAW_TOOLS.forEach(t => {
+            const btn = document.getElementById(`drawBtn_${t}`);
+            const on = currentDrawTool === t;
+            btn.style.borderColor = on ? '#fbbf24' : '#334155';
+            btn.style.color = on ? '#fbbf24' : '#94a3b8';
+            btn.style.backgroundColor = on ? 'rgba(251, 191, 36, 0.12)' : 'transparent';
+        });
+        // 작도 중에는 터치로 화면이 스크롤되지 않게 막습니다.
+        document.getElementById('stockCandleCanvas').style.touchAction = currentDrawTool === 'NONE' ? '' : 'none';
+        const msgs = {
+            NONE: '도구를 선택해 차트 위에 보조선·추세선을 그리세요',
+            TREND: draftStartPt ? '종점(두 번째 점)을 클릭하세요' : '추세선 시작점(첫 번째 점)을 클릭하세요',
+            RAY: draftStartPt ? '반직선이 뻗어나갈 방향 점을 클릭하세요' : '반직선 시작점을 클릭하세요',
+            HLINE: '차트에서 수평선(가격 보조선)을 그을 위치를 클릭하세요',
+            VLINE: '차트에서 수직선(시간 기준선)을 그을 캔들 위치를 클릭하세요'
+        };
+        document.getElementById('drawToolHint').textContent = msgs[currentDrawTool] || '';
+    }
+
+    window.undoLastDrawing = function() {
+        if (draftStartPt) {
+            draftStartPt = null;
+            renderDrawToolButtons();
+            drawCandleChart();
+            return;
+        }
+        const lines = chartDrawings[`${selectedStockId}_${selectedTimeframe}`];
+        if (lines && lines.length) {
+            lines.pop();
+            lsSet(LS_DRAWINGS, chartDrawings);
+            drawCandleChart();
+        }
+    };
+
+    window.clearDrawings = function() {
+        delete chartDrawings[`${selectedStockId}_${selectedTimeframe}`];
+        draftStartPt = null;
+        lsSet(LS_DRAWINGS, chartDrawings);
+        renderDrawToolButtons();
+        drawCandleChart();
+    };
+
+    function getChartPointFromEvent(e) {
+        if (!lastChartMetrics) return null;
+        const rect = document.getElementById('stockCandleCanvas').getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const { padLeft, padTop, plotW, plotH, minP, maxP, stepW, baseIdx } = lastChartMetrics;
+        if (x < padLeft || x > padLeft + plotW || y < padTop || y > padTop + plotH) return null;
+        const relIdx = Math.round((x - padLeft - stepW / 2) / stepW);
+        const price = maxP - ((y - padTop) / plotH) * (maxP - minP);
+        return { idx: baseIdx + relIdx, price: alignToTick(Math.max(1, price)) };
+    }
+
+    function setupChartDrawingEvents() {
+        const canvas = document.getElementById('stockCandleCanvas');
+        canvas.addEventListener('pointermove', e => {
+            if (currentDrawTool === 'NONE') return;
+            hoverChartPt = getChartPointFromEvent(e);
+            drawCandleChart();
+        });
+        canvas.addEventListener('pointerleave', () => {
+            hoverChartPt = null;
+            if (currentDrawTool !== 'NONE') drawCandleChart();
+        });
+        canvas.addEventListener('pointerdown', e => {
+            if (currentDrawTool === 'NONE') return;
+            const pt = getChartPointFromEvent(e);
+            if (!pt) return;
+            e.preventDefault();
+            const key = `${selectedStockId}_${selectedTimeframe}`;
+            if (currentDrawTool === 'HLINE' || currentDrawTool === 'VLINE') {
+                (chartDrawings[key] = chartDrawings[key] || []).push({ type: currentDrawTool, p1: pt });
+                lsSet(LS_DRAWINGS, chartDrawings);
+            } else if (!draftStartPt) {
+                draftStartPt = pt;
+            } else {
+                (chartDrawings[key] = chartDrawings[key] || []).push({ type: currentDrawTool, p1: draftStartPt, p2: pt });
+                draftStartPt = null;
+                lsSet(LS_DRAWINGS, chartDrawings);
+            }
+            hoverChartPt = pt;
+            renderDrawToolButtons();
+            drawCandleChart();
+        });
+    }
+
     async function cancelPendingOrder(orderId) {
         if (tradeBusy || !backend || !getCurrentAccount()) return;
         tradeBusy = true;
@@ -5003,6 +5211,8 @@
             });
         });
         renderMAButtons();
+        renderDrawToolButtons();
+        setupChartDrawingEvents();
 
         setupScrollFades();
 
