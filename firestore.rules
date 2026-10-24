@@ -32,7 +32,6 @@ service cloud.firestore {
       return ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
     }
 
-    // 상·하한가가 매일 전일 종가 기준으로 바뀌므로 가격은 양의 정수인지만 확인합니다.
     function validPrice(p) {
       return p is int && p > 0 && p <= 100000000;
     }
@@ -45,7 +44,6 @@ service cloud.firestore {
       return d.get('pendingOrders', []);
     }
 
-    // id 종목의 보유 수량이 정확히 delta 만큼 바뀌고 다른 종목은 그대로인지 확인합니다.
     function holdingChange(before, after, id, delta) {
       let oldQty = before.holdings.get(id, {'qty': 0}).qty;
       let h = after.holdings.get(id, null);
@@ -59,7 +57,6 @@ service cloud.firestore {
         && newQty == oldQty + delta;
     }
 
-    // 즉시 체결 (장중에만)
     function validTrade(before, after) {
       let t = after.lastTrade;
       return t.keys().hasAll(['stock', 'side', 'qty', 'price'])
@@ -90,7 +87,6 @@ service cloud.firestore {
         && o.createdAt is number;
     }
 
-    // 지정가·예약 주문 접수 (장 마감 중에도 가능). 매수는 주문금액만큼 현금을 묶습니다.
     function validPlace(before, after) {
       let t = after.lastTrade;
       let o = t.order;
@@ -109,7 +105,6 @@ service cloud.firestore {
         );
     }
 
-    // 미체결 주문 취소. 매수는 묶인 현금을 돌려줍니다.
     function validCancel(before, after) {
       let t = after.lastTrade;
       let o = t.order;
@@ -121,7 +116,6 @@ service cloud.firestore {
         && after.cash == before.cash + (o.side == 'BUY' ? o.qty * o.targetPrice : 0);
     }
 
-    // 미체결 주문 체결 (장중에만). 지정가보다 같거나 유리한 가격이어야 합니다.
     function validFill(before, after) {
       let t = after.lastTrade;
       let o = t.order;
