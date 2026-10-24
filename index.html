@@ -2092,13 +2092,17 @@
         >
             <div class="flex flex-wrap items-center gap-1.5">
                 <span class="text-slate-400 font-bold mr-1">
-                    <i class="fa-solid fa-wave-square mr-1 text-blue-400"></i>이동평균선(MA):
+                    <i class="fa-solid fa-wave-square mr-1 text-blue-400"></i>지표:
                 </span>
                 <button onclick="toggleMA(5)" id="maBtn_5" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
                 <button onclick="toggleMA(10)" id="maBtn_10" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
                 <button onclick="toggleMA(20)" id="maBtn_20" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
                 <button onclick="toggleMA(60)" id="maBtn_60" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
                 <button onclick="toggleMA(120)" id="maBtn_120" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
+                <span class="text-slate-700 mx-0.5">|</span>
+                <button onclick="toggleSubInd('bb')" id="indBtn_bb" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
+                <button onclick="toggleSubInd('vol')" id="indBtn_vol" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
+                <button onclick="toggleSubInd('rsi')" id="indBtn_rsi" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
             </div>
             <div id="maValueLegend" class="flex flex-wrap items-center gap-2 font-mono text-[11px]"></div>
         </div>
@@ -2590,6 +2594,12 @@
         { period: 120, color: '#a78bfa', label: 'MA120' }
     ];
 
+    const IND_CONFIGS = [
+        { key: 'bb', color: '#38bdf8', label: '볼린저밴드' },
+        { key: 'vol', color: '#94a3b8', label: '거래량' },
+        { key: 'rsi', color: '#c084fc', label: 'RSI' }
+    ];
+
     const LS_DAILY = 'khts.daily.v1';
 
     const COMPANY_META = [
@@ -2772,12 +2782,14 @@
         return {
             day,
             rng: createRng(hash3(idx + 1, day, SIM_VERSION)),
+            // 거래량은 가격 난수열을 건드리지 않도록 별도 해시로 만듭니다.
+            volSeed: hash3(idx + 1, day, 0x564f4c),
             limits,
             steps: 0,
             price: open,
             // 상·하한가에 닿으면 그날 장 마감까지 그 가격에 고정됩니다.
             lockedLimit: null,
-            candle: { day, open, high: open, low: open, close: open },
+            candle: { day, open, high: open, low: open, close: open, volume: 0 },
             buckets: []
         };
     }
@@ -2799,22 +2811,26 @@
                 else if (p <= s.limits.lower) s.lockedLimit = 'LOWER';
             }
 
+            const stepVol = (s.lockedLimit ? 1 : (hash3(s.volSeed, s.steps, 1) % 18) + 2) * (p !== before ? 3 : 1);
+
             if (track) {
                 const bi = Math.floor(s.steps / BUCKET_STEPS);
                 let b = s.buckets[s.buckets.length - 1];
                 if (!b || b.index !== bi) {
-                    b = { day: s.day, index: bi, open: before, high: before, low: before, close: before };
+                    b = { day: s.day, index: bi, open: before, high: before, low: before, close: before, volume: 0 };
                     s.buckets.push(b);
                 }
                 if (p > b.high) b.high = p;
                 if (p < b.low) b.low = p;
                 b.close = p;
+                b.volume += stepVol;
             }
 
             const c = s.candle;
             if (p > c.high) c.high = p;
             if (p < c.low) c.low = p;
             c.close = p;
+            c.volume += stepVol;
             s.price = p;
             s.steps++;
         }
@@ -2852,7 +2868,8 @@
     }
 
     function isValidCachedCandle(e) {
-        return Array.isArray(e) && e.length === 4 && e.every(v => Number.isFinite(v) && v > 0);
+        // [시가, 고가, 저가, 종가, 거래량] — 거래량이 없는 예전 캐시는 다시 계산합니다.
+        return Array.isArray(e) && e.length === 5 && e.every(v => Number.isFinite(v) && v >= 0) && e.slice(0, 4).every(v => v > 0);
     }
 
     let stocks = {};
@@ -2867,6 +2884,7 @@
     let selectedTimeframe = '5m';
     let currentTradeSide = 'BUY';
     let activeMAs = { 5: true, 10: false, 20: true, 60: false, 120: false };
+    let activeIndicators = { bb: false, vol: true, rsi: false };
 
     let localSystemVersion = null;
     let ownBroadcastVersion = null;
@@ -2895,8 +2913,8 @@
                 const k = d - EPOCH_DAY;
                 const needBuckets = today - d <= INTRADAY_DAYS;
                 if (!needBuckets && isValidCachedCandle(cached[k])) {
-                    const [open, high, low, close] = cached[k];
-                    daily.push({ day: d, open, high, low, close });
+                    const [open, high, low, close, volume] = cached[k];
+                    daily.push({ day: d, open, high, low, close, volume });
                     price = close;
                     continue;
                 }
@@ -2904,7 +2922,7 @@
                 advanceSession(s, SESSION_STEPS, needBuckets);
                 daily.push({ ...s.candle });
                 if (!isValidCachedCandle(cached[k])) {
-                    cached[k] = [s.candle.open, s.candle.high, s.candle.low, s.candle.close];
+                    cached[k] = [s.candle.open, s.candle.high, s.candle.low, s.candle.close, s.candle.volume];
                     cacheDirty = true;
                 }
                 if (needBuckets) prevBuckets = prevBuckets.concat(s.buckets);
@@ -2993,13 +3011,14 @@
         list.forEach(c => {
             const key = keyFn(c);
             if (!cur || key !== curKey) {
-                cur = { open: c.open, high: c.high, low: c.low, close: c.close };
+                cur = { open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0 };
                 curKey = key;
                 out.push(cur);
             } else {
                 if (c.high > cur.high) cur.high = c.high;
                 if (c.low < cur.low) cur.low = c.low;
                 cur.close = c.close;
+                cur.volume += c.volume || 0;
             }
         });
         return out;
@@ -3827,6 +3846,54 @@
                 legendHtml.push(`<span style="color:${cfg.color};font-weight:700">${cfg.label}:${last}</span>`);
             }
         });
+
+        // 볼린저 밴드: 20봉 이동평균 ± 2표준편차
+        let bbSeries = null;
+        if (activeIndicators.bb) {
+            bbSeries = candles.map((_, i) => {
+                const fi = startOffset + i;
+                const cnt = Math.min(20, fi + 1);
+                let sum = 0;
+                for (let k = fi - cnt + 1; k <= fi; k++) sum += fullCandles[k].close;
+                const mid = sum / cnt;
+                let sq = 0;
+                for (let k = fi - cnt + 1; k <= fi; k++) sq += (fullCandles[k].close - mid) ** 2;
+                const std = Math.sqrt(sq / cnt);
+                return { upper: mid + 2 * std, mid, lower: Math.max(0, mid - 2 * std) };
+            });
+            const lb = bbSeries[bbSeries.length - 1];
+            if (lb) {
+                legendHtml.push(`<span style="color:#38bdf8;font-weight:700">BB:${Math.round(lb.upper).toLocaleString()}/${Math.round(lb.lower).toLocaleString()}</span>`);
+            }
+        }
+
+        // RSI(14): 와일더 평활 방식
+        let rsiSeries = null;
+        if (activeIndicators.rsi) {
+            const fullRsi = new Array(fullCandles.length).fill(50);
+            let avgG = 0, avgL = 0;
+            for (let i = 1; i < fullCandles.length; i++) {
+                const diff = fullCandles[i].close - fullCandles[i - 1].close;
+                const g = diff > 0 ? diff : 0;
+                const l = diff < 0 ? -diff : 0;
+                if (i <= 14) {
+                    avgG += g / 14;
+                    avgL += l / 14;
+                } else {
+                    avgG = (avgG * 13 + g) / 14;
+                    avgL = (avgL * 13 + l) / 14;
+                }
+                fullRsi[i] = avgL === 0 ? (avgG === 0 ? 50 : 100) : 100 - 100 / (1 + avgG / avgL);
+            }
+            rsiSeries = fullRsi.slice(startOffset);
+            if (rsiSeries.length) {
+                legendHtml.push(`<span style="color:#c084fc;font-weight:700">RSI(14):${rsiSeries[rsiSeries.length - 1].toFixed(1)}</span>`);
+            }
+        }
+
+        if (activeIndicators.vol && candles.length) {
+            legendHtml.push(`<span style="color:#94a3b8;font-weight:700">거래량:${(candles[candles.length - 1].volume || 0).toLocaleString()}</span>`);
+        }
         document.getElementById('maValueLegend').innerHTML = legendHtml.join('');
 
         ctx.font = "12px 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -3837,9 +3904,15 @@
             return;
         }
 
-        const padTop = 24, padBottom = 24, padLeft = 16, padRight = 72;
+        const padTop = 20, padBottom = 20, padLeft = 16, padRight = 72;
         const plotW = W - padLeft - padRight;
-        const plotH = H - padTop - padBottom;
+        const totalH = H - padTop - padBottom;
+        // 거래량·RSI가 켜지면 가격 차트 아래에 보조 차트를 나눠 그립니다.
+        const subCount = (activeIndicators.vol ? 1 : 0) + (activeIndicators.rsi ? 1 : 0);
+        const priceRatio = subCount === 2 ? 0.56 : (subCount === 1 ? 0.74 : 1);
+        const subGap = 12;
+        const plotH = totalH * priceRatio - (subCount > 0 ? subGap : 0);
+        const subEachH = subCount > 0 ? (totalH * (1 - priceRatio) - (subCount === 2 ? subGap : 0)) / subCount : 0;
 
         let minP = Infinity, maxP = -Infinity;
         candles.forEach(c => {
@@ -3850,6 +3923,10 @@
             if (v < minP) minP = v;
             if (v > maxP) maxP = v;
         }));
+        if (bbSeries) bbSeries.forEach(b => {
+            if (b.lower < minP) minP = b.lower;
+            if (b.upper > maxP) maxP = b.upper;
+        });
         const margin = Math.max((maxP - minP) * 0.12, getTickSize(st.price) * 4);
         minP = Math.max(0, minP - margin);
         maxP += margin;
@@ -3874,6 +3951,32 @@
         const slots = Math.max(candles.length, 40);
         const stepW = plotW / slots;
         const bodyW = Math.max(3, Math.min(16, stepW * 0.65));
+
+        if (bbSeries && bbSeries.length > 1) {
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+            ctx.beginPath();
+            bbSeries.forEach((b, idx) => {
+                const cx = padLeft + idx * stepW + stepW / 2;
+                if (idx === 0) ctx.moveTo(cx, toY(b.upper));
+                else ctx.lineTo(cx, toY(b.upper));
+            });
+            for (let idx = bbSeries.length - 1; idx >= 0; idx--) {
+                ctx.lineTo(padLeft + idx * stepW + stepW / 2, toY(bbSeries[idx].lower));
+            }
+            ctx.closePath();
+            ctx.fill();
+            ['upper', 'lower'].forEach(k => {
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                bbSeries.forEach((b, idx) => {
+                    const cx = padLeft + idx * stepW + stepW / 2;
+                    if (idx === 0) ctx.moveTo(cx, toY(b[k]));
+                    else ctx.lineTo(cx, toY(b[k]));
+                });
+                ctx.stroke();
+            });
+        }
 
         candles.forEach((c, idx) => {
             const cx = padLeft + idx * stepW + stepW / 2;
@@ -3920,6 +4023,56 @@
         ctx.fillRect(padLeft + plotW + 2, yNow - 9, padRight - 4, 18);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(st.price.toLocaleString(), padLeft + plotW + 8, yNow + 4);
+
+        let subTop = padTop + plotH + subGap;
+        if (activeIndicators.vol) {
+            const maxV = Math.max(1, ...candles.map(c => c.volume || 0));
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, subTop);
+            ctx.lineTo(padLeft + plotW, subTop);
+            ctx.stroke();
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('VOL', padLeft + plotW + 8, subTop + 12);
+            candles.forEach((c, idx) => {
+                const cx = padLeft + idx * stepW + stepW / 2;
+                const bh = ((c.volume || 0) / maxV) * (subEachH - 4);
+                ctx.fillStyle = c.close >= c.open ? 'rgba(240, 68, 82, 0.65)' : 'rgba(49, 130, 246, 0.65)';
+                ctx.fillRect(cx - bodyW / 2, subTop + subEachH - bh, bodyW, Math.max(1, bh));
+            });
+            subTop += subEachH + subGap;
+        }
+        if (activeIndicators.rsi && rsiSeries) {
+            const rToY = r => subTop + ((100 - r) / 100) * subEachH;
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, subTop);
+            ctx.lineTo(padLeft + plotW, subTop);
+            ctx.stroke();
+            ctx.setLineDash([2, 2]);
+            ctx.strokeStyle = '#334155';
+            [70, 30].forEach(lv => {
+                const ly = rToY(lv);
+                ctx.beginPath();
+                ctx.moveTo(padLeft, ly);
+                ctx.lineTo(padLeft + plotW, ly);
+                ctx.stroke();
+                ctx.fillStyle = '#64748b';
+                ctx.fillText(String(lv), padLeft + plotW + 8, ly + 3);
+            });
+            ctx.setLineDash([]);
+            ctx.strokeStyle = '#c084fc';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            rsiSeries.forEach((v, idx) => {
+                const cx = padLeft + idx * stepW + stepW / 2;
+                if (idx === 0) ctx.moveTo(cx, rToY(v));
+                else ctx.lineTo(cx, rToY(v));
+            });
+            ctx.stroke();
+        }
     }
 
     function buildOrderBookRows() {
@@ -4629,6 +4782,12 @@
         drawCandleChart();
     };
 
+    window.toggleSubInd = function(key) {
+        activeIndicators[key] = !activeIndicators[key];
+        renderMAButtons();
+        drawCandleChart();
+    };
+
     function renderMAButtons() {
         MA_CONFIGS.forEach(cfg => {
             const btn = document.getElementById(`maBtn_${cfg.period}`);
@@ -4636,6 +4795,13 @@
             btn.style.borderColor = on ? cfg.color : '#334155';
             btn.style.color = on ? cfg.color : '#64748b';
             btn.textContent = `${cfg.period}선${on ? ' ON' : ''}`;
+        });
+        IND_CONFIGS.forEach(cfg => {
+            const btn = document.getElementById(`indBtn_${cfg.key}`);
+            const on = activeIndicators[cfg.key];
+            btn.style.borderColor = on ? cfg.color : '#334155';
+            btn.style.color = on ? cfg.color : '#64748b';
+            btn.textContent = `${cfg.label}${on ? ' ON' : ''}`;
         });
     }
 
