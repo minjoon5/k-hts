@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.20">
+    <meta name="app-version" content="1.1.0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -1872,6 +1872,19 @@
     </div>
 
     <div class="flex items-center gap-2">
+        <button
+            id="myPropertyNavBtn"
+            onclick="openMyAssetModal()"
+            class="hidden bg-blue-950/80 hover:bg-slate-800 text-blue-300 border border-blue-800/50 text-xs font-extrabold px-3 py-1.5 rounded-lg transition items-center gap-1.5"
+            title="보유 종목과 미체결 주문을 한눈에 봅니다"
+        >
+            <i class="fa-solid fa-wallet text-amber-400"></i>
+            <span>내 재산</span>
+            <span
+                id="pendingCountNavBadge"
+                class="hidden bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded-full"
+            >0</span>
+        </button>
         <div
             id="loggedInUserBox"
             class="hidden items-center gap-2 bg-[#0b0e14] px-3 py-1.5 rounded-lg border border-slate-800 text-xs"
@@ -1975,7 +1988,7 @@
                     <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
                         <i class="fa-solid fa-building text-blue-400"></i> 상장 10대 기업 선택 (클릭 시 거래화면 이동)
                     </h2>
-                    <p class="text-xs text-slate-400 mt-0.5">상장 기준가 대비 상한가(+50%) · 하한가(-50%) 제한 · 모든 참가자에게 같은 시세가 표시됩니다</p>
+                    <p class="text-xs text-slate-400 mt-0.5">전일 종가(기준가) 대비 상한가(+50%) · 하한가(-50%) 제한 · 도달 시 장 마감까지 고정 · 모든 참가자에게 같은 시세가 표시됩니다</p>
                 </div>
             </div>
 
@@ -2074,6 +2087,22 @@
             </div>
         </div>
 
+        <div
+            class="bg-[#0b0e14] px-3.5 py-1.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px]"
+        >
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-slate-400 font-bold mr-1">
+                    <i class="fa-solid fa-wave-square mr-1 text-blue-400"></i>이동평균선(MA):
+                </span>
+                <button onclick="toggleMA(5)" id="maBtn_5" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
+                <button onclick="toggleMA(10)" id="maBtn_10" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
+                <button onclick="toggleMA(20)" id="maBtn_20" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
+                <button onclick="toggleMA(60)" id="maBtn_60" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
+                <button onclick="toggleMA(120)" id="maBtn_120" class="px-2 py-0.5 rounded border text-[11px] font-bold transition"></button>
+            </div>
+            <div id="maValueLegend" class="flex flex-wrap items-center gap-2 font-mono text-[11px]"></div>
+        </div>
+
         <div id="chartContainer" class="relative flex-1 min-h-[320px] bg-[#0b0e14] w-full overflow-hidden">
             <canvas id="stockCandleCanvas" class="absolute inset-0 w-full h-full block"></canvas>
         </div>
@@ -2123,6 +2152,11 @@
                 >매도 (Sell)</button>
             </div>
 
+            <div class="flex items-center justify-between bg-[#0b0e14] px-3 py-1.5 rounded-lg border border-slate-800 text-[11px]">
+                <span class="text-slate-400 font-semibold">주문 처리 방식</span>
+                <span id="orderExecModeBadge" class="font-extrabold text-emerald-400">즉시 체결</span>
+            </div>
+
             <div class="space-y-1.5 text-xs">
                 <div class="flex justify-between text-slate-400 font-semibold">
                     <span>주문 단가 (원)</span>
@@ -2144,7 +2178,7 @@
                         class="w-10 h-10 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-r-lg border border-slate-700"
                     >+</button>
                 </div>
-                <p class="text-[11px] text-slate-500">매수는 현재가 이상, 매도는 현재가 이하로 입력하면 현재가로 즉시 체결됩니다.</p>
+                <p class="text-[11px] text-slate-500">현재가와 다르게 입력하면 지정가 대기 주문으로, 장 마감 중에는 예약 주문으로 접수됩니다.</p>
             </div>
 
             <div class="space-y-1.5 text-xs">
@@ -2224,6 +2258,21 @@
             >
                 매수 주문 체결하기
             </button>
+
+            <div class="border-t border-slate-800 pt-3 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="font-extrabold text-white">
+                        <i class="fa-solid fa-clock text-amber-400 mr-1"></i>미체결 지정가·예약 (<span id="pendingOrderCount">0</span>)
+                    </span>
+                    <button onclick="openMyAssetModal()" class="text-[11px] text-blue-400 hover:underline">내 재산 상세</button>
+                </div>
+                <div
+                    id="tradePendingList"
+                    class="bg-[#0b0e14] border border-slate-800 rounded-xl p-2 max-h-36 overflow-y-auto divide-y divide-slate-800/60 text-[11px]"
+                >
+                    <div class="py-2 text-center text-slate-500">대기 중인 주문이 없습니다.</div>
+                </div>
+            </div>
         </div>
     </section>
 </main>
@@ -2426,35 +2475,83 @@
     class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4"
     onclick="if (event.target === this) closeMyAssetModal()"
 >
-    <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5">
+    <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] p-6 shadow-2xl flex flex-col gap-4 overflow-y-auto">
         <div class="flex items-center justify-between">
             <h3 class="text-base font-extrabold text-white flex items-center gap-2">
-                <i class="fa-solid fa-wallet text-blue-400"></i> <span id="myAssetTitle">내 자산</span>
+                <i class="fa-solid fa-wallet text-blue-400"></i> <span id="myAssetTitle">내 재산</span>
             </h3>
             <button onclick="closeMyAssetModal()" class="text-slate-400 hover:text-white" aria-label="닫기">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <div class="bg-[#0b0e14] border border-slate-800 rounded-xl p-4 space-y-1">
-            <div class="text-xs text-slate-400 font-bold">총 평가자산</div>
-            <div id="myAssetTotal" class="text-2xl font-black text-white">0원</div>
-            <div id="myAssetProfit" class="text-xs font-bold kr-flat">0원 (0.00%)</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-[#0b0e14] border border-slate-800 rounded-xl p-4 space-y-1">
+                <div class="text-xs text-slate-400 font-bold">총 평가자산 (현금+주식)</div>
+                <div id="myAssetTotal" class="text-2xl font-black text-white">0원</div>
+                <div id="myAssetProfit" class="text-xs font-bold kr-flat">0원 (0.00%)</div>
+            </div>
+            <dl class="bg-[#0b0e14] border border-slate-800 rounded-xl p-4 text-xs space-y-2">
+                <div class="flex justify-between">
+                    <dt class="text-slate-400 font-bold">주문가능 현금</dt>
+                    <dd id="myAssetCash" class="font-extrabold text-white">0원</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-slate-400 font-bold">미체결·예약 묶인 현금</dt>
+                    <dd id="myAssetLockedCash" class="font-extrabold text-amber-300">0원</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-slate-400 font-bold">주식 총 매수원금</dt>
+                    <dd id="myAssetCostBasis" class="font-extrabold text-slate-300">0원</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-slate-400 font-bold">주식 평가금 (수익률)</dt>
+                    <dd>
+                        <span id="myAssetStock" class="font-extrabold text-white">0원</span>
+                        (<span id="myAssetRate" class="font-extrabold kr-flat">0.00%</span>)
+                    </dd>
+                </div>
+            </dl>
         </div>
-        <dl class="bg-[#0b0e14] border border-slate-800 rounded-xl p-4 text-sm space-y-3">
-            <div class="flex items-center justify-between">
-                <dt class="text-slate-400 font-bold">보유 현금</dt>
-                <dd id="myAssetCash" class="font-extrabold text-white">0원</dd>
+        <div class="space-y-1.5">
+            <h4 class="text-xs font-extrabold text-white">
+                <i class="fa-solid fa-layer-group text-blue-400 mr-1"></i>보유 주식 포트폴리오 상세
+            </h4>
+            <div class="overflow-x-auto border border-slate-800 rounded-xl">
+                <table class="w-full text-left border-collapse whitespace-nowrap text-xs">
+                    <thead>
+                        <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
+                            <th class="py-2 px-3 font-bold">종목명</th>
+                            <th class="py-2 px-3 font-bold text-right">수량</th>
+                            <th class="py-2 px-3 font-bold text-right">매수평단</th>
+                            <th class="py-2 px-3 font-bold text-right">현재가</th>
+                            <th class="py-2 px-3 font-bold text-right">평가손익(수익률)</th>
+                            <th class="py-2 px-3 font-bold text-right">비중</th>
+                        </tr>
+                    </thead>
+                    <tbody id="myHoldingsTableBody" class="divide-y divide-slate-800/60"></tbody>
+                </table>
             </div>
-            <div class="flex items-center justify-between">
-                <dt class="text-slate-400 font-bold">주식 평가금</dt>
-                <dd id="myAssetStock" class="font-extrabold text-white">0원</dd>
+        </div>
+        <div class="space-y-1.5">
+            <h4 class="text-xs font-extrabold text-white">
+                <i class="fa-solid fa-clock text-amber-400 mr-1"></i>미체결 지정가 · 예약 주문 관리
+            </h4>
+            <div class="overflow-x-auto border border-slate-800 rounded-xl">
+                <table class="w-full text-left border-collapse whitespace-nowrap text-xs">
+                    <thead>
+                        <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
+                            <th class="py-2 px-3 font-bold">구분</th>
+                            <th class="py-2 px-3 font-bold">종목명</th>
+                            <th class="py-2 px-3 font-bold text-right">지정단가</th>
+                            <th class="py-2 px-3 font-bold text-right">수량</th>
+                            <th class="py-2 px-3 font-bold text-right">취소</th>
+                        </tr>
+                    </thead>
+                    <tbody id="myPendingModalBody" class="divide-y divide-slate-800/60"></tbody>
+                </table>
             </div>
-            <div class="flex items-center justify-between">
-                <dt class="text-slate-400 font-bold">누적 수익률</dt>
-                <dd id="myAssetRate" class="font-extrabold kr-flat">0.00%</dd>
-            </div>
-        </dl>
-        <p class="text-[11px] text-slate-500 text-center">현재가 기준으로 실시간 갱신됩니다 · 초기자금 5,000만 원</p>
+        </div>
+        <p class="text-[11px] text-slate-500 text-center">현재가 기준으로 실시간 갱신됩니다 · 초기자금 5,000만 원 · 지정가·예약 주문은 접속 중일 때 체결됩니다</p>
     </div>
 </div>
 
@@ -2473,9 +2570,8 @@
 
     const INITIAL_CASH = 50000000;
     const TIMEFRAMES = ['5m', '15m', '30m', '1d', '1w', '1M'];
-    const LAUNCH_DATE = [2026, 10, 22];
-    const SIM_VERSION = 1;
-    const HISTORY_DAYS = 1100;
+    const LAUNCH_DATE = [2026, 10, 20];
+    const SIM_VERSION = 2;
     const KST_OFFSET_MS = 9 * 3600 * 1000;
     const DAY_MS = 86400000;
     const OPEN_SEC = 6 * 3600;
@@ -2483,6 +2579,16 @@
     const BUCKET_STEPS = 300;
     const CHART_CANDLES = 60;
     const EPOCH_DAY = Date.UTC(LAUNCH_DATE[0], LAUNCH_DATE[1] - 1, LAUNCH_DATE[2]) / DAY_MS;
+    // 분봉 차트에 보여 줄 최근 일수 (오늘 제외)
+    const INTRADAY_DAYS = 7;
+    const MAX_PENDING_ORDERS = 20;
+    const MA_CONFIGS = [
+        { period: 5, color: '#facc15', label: 'MA5' },
+        { period: 10, color: '#f472b6', label: 'MA10' },
+        { period: 20, color: '#fb923c', label: 'MA20' },
+        { period: 60, color: '#34d399', label: 'MA60' },
+        { period: 120, color: '#a78bfa', label: 'MA120' }
+    ];
 
     const LS_DAILY = 'khts.daily.v1';
 
@@ -2669,6 +2775,8 @@
             limits,
             steps: 0,
             price: open,
+            // 상·하한가에 닿으면 그날 장 마감까지 그 가격에 고정됩니다.
+            lockedLimit: null,
             candle: { day, open, high: open, low: open, close: open },
             buckets: []
         };
@@ -2679,9 +2787,17 @@
             const before = s.price;
             const r = s.rng();
             let p = before;
-            if (r < 0.35) p = nextUp(before);
-            else if (r < 0.70) p = nextDown(before);
-            p = clampToLimits(p, s.limits);
+            if (s.lockedLimit === 'UPPER') {
+                p = s.limits.upper;
+            } else if (s.lockedLimit === 'LOWER') {
+                p = s.limits.lower;
+            } else {
+                if (r < 0.35) p = nextUp(before);
+                else if (r < 0.70) p = nextDown(before);
+                p = clampToLimits(p, s.limits);
+                if (p >= s.limits.upper) s.lockedLimit = 'UPPER';
+                else if (p <= s.limits.lower) s.lockedLimit = 'LOWER';
+            }
 
             if (track) {
                 const bi = Math.floor(s.steps / BUCKET_STEPS);
@@ -2702,24 +2818,6 @@
             s.price = p;
             s.steps++;
         }
-    }
-
-    function buildSyntheticHistory(meta, idx, limits) {
-        const rng = createRng(hash3(idx + 1, 0x5eed, SIM_VERSION));
-        const fit = p => clampToLimits(alignToTick(p), limits);
-        const out = [];
-        let close = meta.basePrice;
-        for (let k = 1; k <= HISTORY_DAYS; k++) {
-            const change = (rng() + rng() + rng() - 1.5) * 0.2;
-            const open = fit(close * (1 - change));
-            const top = Math.max(open, close);
-            const bottom = Math.min(open, close);
-            const high = Math.max(top, fit(top * (1 + rng() * 0.06)));
-            const low = Math.min(bottom, fit(bottom * (1 - rng() * 0.06)));
-            out.push({ day: EPOCH_DAY - k, open, high, low, close });
-            close = open;
-        }
-        return out.reverse();
     }
 
     function lsGet(key, fallback) {
@@ -2768,6 +2866,7 @@
     let selectedStockId = 'A';
     let selectedTimeframe = '5m';
     let currentTradeSide = 'BUY';
+    let activeMAs = { 5: true, 10: false, 20: true, 60: false, 120: false };
 
     let localSystemVersion = null;
     let ownBroadcastVersion = null;
@@ -2786,38 +2885,40 @@
         const next = {};
 
         COMPANY_META.forEach((meta, idx) => {
-            const limits = getPriceLimits(meta.basePrice);
-            const daily = buildSyntheticHistory(meta, idx, limits);
+            const daily = [];
             const cached = Array.isArray(cache.stocks[meta.id]) ? cache.stocks[meta.id] : [];
             let price = meta.basePrice;
             let prevBuckets = [];
 
+            // 상장일부터 실제로 쌓인 시세만 씁니다. 상·하한가는 매일 시가(전일 종가) 기준입니다.
             for (let d = EPOCH_DAY; d < today; d++) {
                 const k = d - EPOCH_DAY;
-                const needBuckets = d === today - 1;
+                const needBuckets = today - d <= INTRADAY_DAYS;
                 if (!needBuckets && isValidCachedCandle(cached[k])) {
                     const [open, high, low, close] = cached[k];
                     daily.push({ day: d, open, high, low, close });
                     price = close;
                     continue;
                 }
-                const s = createSession(idx, limits, d, price);
+                const s = createSession(idx, getPriceLimits(price), d, price);
                 advanceSession(s, SESSION_STEPS, needBuckets);
                 daily.push({ ...s.candle });
                 if (!isValidCachedCandle(cached[k])) {
                     cached[k] = [s.candle.open, s.candle.high, s.candle.low, s.candle.close];
                     cacheDirty = true;
                 }
-                if (needBuckets) prevBuckets = s.buckets;
+                if (needBuckets) prevBuckets = prevBuckets.concat(s.buckets);
                 price = s.candle.close;
             }
             cache.stocks[meta.id] = cached;
 
+            const limits = getPriceLimits(price);
             const session = createSession(idx, limits, today, price);
             advanceSession(session, stepsElapsed(nowMs), true);
 
             next[meta.id] = {
                 ...meta,
+                basePrice: price,
                 idx,
                 limits,
                 daily,
@@ -2882,6 +2983,7 @@
         Object.values(stocks).forEach(st => refreshOrderBook(st, open));
         updateClockAndMarketStatus(now);
         refreshAllViews();
+        if (open) checkAndExecutePendingOrders();
     }
 
     function aggregateCandles(list, keyFn) {
@@ -2900,7 +3002,7 @@
                 cur.close = c.close;
             }
         });
-        return out.slice(-CHART_CANDLES);
+        return out;
     }
 
     function getDailyCandles(st) {
@@ -2908,12 +3010,13 @@
         return st.daily.concat([{ ...st.session.candle }]);
     }
 
-    function getChartCandles(st, tf) {
+    // 이동평균선 계산을 위해 잘라내지 않은 전체 봉을 돌려줍니다.
+    function getFullTimeframeCandles(st, tf) {
         const intraday = () => st.prevBuckets.concat(st.session.buckets);
-        if (tf === '5m') return intraday().slice(-CHART_CANDLES);
+        if (tf === '5m') return intraday();
         if (tf === '15m') return aggregateCandles(intraday(), b => b.day * 1000 + Math.floor(b.index / 3));
         if (tf === '30m') return aggregateCandles(intraday(), b => b.day * 1000 + Math.floor(b.index / 6));
-        if (tf === '1d') return getDailyCandles(st).slice(-CHART_CANDLES);
+        if (tf === '1d') return getDailyCandles(st);
         if (tf === '1w') return aggregateCandles(getDailyCandles(st), c => Math.floor((c.day + 3) / 7));
         return aggregateCandles(getDailyCandles(st), c => {
             const d = new Date(c.day * DAY_MS);
@@ -2968,14 +3071,54 @@
         return out;
     }
 
+    // 지정가·예약 주문. firestore.rules 의 validOrder() 와 필드가 같아야 합니다.
+    function normalizePendingOrders(raw) {
+        if (!Array.isArray(raw)) return [];
+        return raw.filter(o => o
+            && typeof o.id === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(o.id)
+            && COMPANY_META.some(m => m.id === o.stockId)
+            && (o.side === 'BUY' || o.side === 'SELL')
+            && Number.isInteger(o.qty) && o.qty > 0
+            && Number.isInteger(o.targetPrice) && o.targetPrice > 0
+            && (o.orderType === 'LIMIT' || o.orderType === 'RESERVED')
+            && Number.isFinite(o.createdAt)
+        ).map(o => ({
+            id: o.id,
+            stockId: o.stockId,
+            side: o.side,
+            qty: o.qty,
+            targetPrice: o.targetPrice,
+            orderType: o.orderType,
+            createdAt: o.createdAt
+        }));
+    }
+
     function normalizeAccount(id, data) {
         const cash = Number(data && data.cash);
         return {
             id,
             nickname: String((data && data.nickname) || id),
             cash: Number.isFinite(cash) && cash >= 0 ? cash : 0,
-            holdings: normalizeHoldings(data && data.holdings)
+            holdings: normalizeHoldings(data && data.holdings),
+            pendingOrders: normalizePendingOrders(data && data.pendingOrders)
         };
+    }
+
+    function getLockedSellQty(acc, stockId) {
+        return acc.pendingOrders
+            .filter(o => o.side === 'SELL' && o.stockId === stockId)
+            .reduce((sum, o) => sum + o.qty, 0);
+    }
+
+    function getLockedBuyCash(acc) {
+        return acc.pendingOrders
+            .filter(o => o.side === 'BUY')
+            .reduce((sum, o) => sum + o.targetPrice * o.qty, 0);
+    }
+
+    function getSellableQty(acc, stockId) {
+        const hold = acc.holdings[stockId];
+        return Math.max(0, (hold ? hold.qty : 0) - getLockedSellQty(acc, stockId));
     }
 
     function applyTradeToAccount(acc, side, stockId, qty, price) {
@@ -2987,14 +3130,118 @@
             if (acc.cash < cost) throw new Error('주문 가능 현금이 부족합니다!');
             const newQty = prev.qty + qty;
             holdings[stockId] = { qty: newQty, avgPrice: (prev.qty * prev.avgPrice + cost) / newQty };
-            return { cash: acc.cash - cost, holdings, lastTrade: { stock: stockId, side, qty, price } };
+            return { cash: acc.cash - cost, holdings, pendingOrders: acc.pendingOrders, lastTrade: { stock: stockId, side, qty, price } };
         }
 
-        if (prev.qty < qty) throw new Error('매도할 보유 주식이 부족합니다!');
+        if (getSellableQty(acc, stockId) < qty) throw new Error('매도 가능한 보유 주식이 부족합니다! (미체결 매도 주문 수량 제외)');
         const left = prev.qty - qty;
         if (left > 0) holdings[stockId] = { qty: left, avgPrice: prev.avgPrice };
         else delete holdings[stockId];
-        return { cash: acc.cash + price * qty, holdings, lastTrade: { stock: stockId, side, qty, price } };
+        return { cash: acc.cash + price * qty, holdings, pendingOrders: acc.pendingOrders, lastTrade: { stock: stockId, side, qty, price } };
+    }
+
+    // 매수 지정가·예약 주문은 접수할 때 주문금액만큼 현금을 묶어 둡니다.
+    function applyAddPendingOrder(acc, side, stockId, qty, targetPrice, orderType) {
+        if (acc.pendingOrders.length >= MAX_PENDING_ORDERS) {
+            throw new Error(`미체결 주문은 최대 ${MAX_PENDING_ORDERS}건까지 걸어 둘 수 있습니다.`);
+        }
+        let cash = acc.cash;
+        if (side === 'BUY') {
+            const reserve = targetPrice * qty;
+            if (cash < reserve) throw new Error('지정가·예약 매수에 필요한 현금이 부족합니다!');
+            cash -= reserve;
+        } else if (getSellableQty(acc, stockId) < qty) {
+            throw new Error('매도 가능한 보유 주식이 부족합니다! (미체결 매도 주문 수량 제외)');
+        }
+        const id = `ord${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+        const order = { id, stockId, side, qty, targetPrice, orderType, createdAt: Date.now() };
+        return {
+            cash,
+            holdings: acc.holdings,
+            pendingOrders: acc.pendingOrders.concat([order]),
+            lastTrade: { kind: 'PLACE', order }
+        };
+    }
+
+    function applyCancelPendingOrder(acc, orderId) {
+        const order = acc.pendingOrders.find(o => o.id === orderId);
+        if (!order) throw new Error('이미 체결되었거나 취소된 주문입니다.');
+        return {
+            cash: order.side === 'BUY' ? acc.cash + order.targetPrice * order.qty : acc.cash,
+            holdings: acc.holdings,
+            pendingOrders: acc.pendingOrders.filter(o => o !== order),
+            lastTrade: { kind: 'CANCEL', order }
+        };
+    }
+
+    // 지정가보다 유리한 현재가로 체결하고, 매수는 묶어 둔 현금과의 차액을 돌려줍니다.
+    function applyFillPendingOrder(acc, order, price) {
+        const holdings = { ...acc.holdings };
+        const prev = holdings[order.stockId] || { qty: 0, avgPrice: 0 };
+        let cash = acc.cash;
+        if (order.side === 'BUY') {
+            const cost = price * order.qty;
+            const newQty = prev.qty + order.qty;
+            holdings[order.stockId] = { qty: newQty, avgPrice: (prev.qty * prev.avgPrice + cost) / newQty };
+            cash += order.targetPrice * order.qty - cost;
+        } else {
+            const left = prev.qty - order.qty;
+            if (left > 0) holdings[order.stockId] = { qty: left, avgPrice: prev.avgPrice };
+            else delete holdings[order.stockId];
+            cash += price * order.qty;
+        }
+        return {
+            cash,
+            holdings,
+            pendingOrders: acc.pendingOrders.filter(o => o !== order),
+            lastTrade: { kind: 'FILL', order, price }
+        };
+    }
+
+    function isOrderFillable(acc, order) {
+        const st = stocks[order.stockId];
+        if (!st) return false;
+        if (order.side === 'BUY') return st.price <= order.targetPrice;
+        const hold = acc.holdings[order.stockId];
+        return st.price >= order.targetPrice && Boolean(hold) && hold.qty >= order.qty;
+    }
+
+    let pendingCheckBusy = false;
+    let pendingRetryAt = 0;
+
+    // 장중에 현재가가 지정가에 닿은 내 주문을 한 건씩 체결합니다. (접속해 있는 동안 동작)
+    async function checkAndExecutePendingOrders() {
+        if (pendingCheckBusy || tradeBusy || !backend || Date.now() < pendingRetryAt) return;
+        const acc = getCurrentAccount();
+        if (!acc || !acc.pendingOrders.some(o => isOrderFillable(acc, o))) return;
+        pendingCheckBusy = true;
+        try {
+            for (;;) {
+                let filled = null;
+                await backend.trade(latest => {
+                    filled = null;
+                    const order = latest.pendingOrders.find(o => isOrderFillable(latest, o));
+                    if (!order) return null;
+                    const price = stocks[order.stockId].price;
+                    filled = { ...order, price };
+                    return applyFillPendingOrder(latest, order, price);
+                });
+                if (!filled) break;
+                const kindLabel = filled.orderType === 'RESERVED' ? '예약' : '지정가';
+                const sideLabel = filled.side === 'BUY' ? '매수' : '매도';
+                const name = stocks[filled.stockId].name;
+                showToast(
+                    `🎯 [${kindLabel} ${sideLabel} 체결] ${name} ${filled.qty.toLocaleString()}주 (${filled.price.toLocaleString()}원)`,
+                    filled.side === 'BUY' ? 'buy' : 'sell'
+                );
+            }
+        } catch (err) {
+            console.error('Pending order fill error:', err);
+            pendingRetryAt = Date.now() + 30000;
+        } finally {
+            pendingCheckBusy = false;
+            refreshAllViews();
+        }
     }
 
     function getCurrentAccount() {
@@ -3157,7 +3404,14 @@
                     const snap = await tx.get(ref);
                     if (!snap.exists()) throw new Error('계좌 정보를 찾을 수 없습니다.');
                     const next = mutate(normalizeAccount(uid, snap.data()));
-                    tx.update(ref, { cash: next.cash, holdings: next.holdings, lastTrade: next.lastTrade, updatedAt: Date.now() });
+                    if (!next) return;
+                    tx.update(ref, {
+                        cash: next.cash,
+                        holdings: next.holdings,
+                        pendingOrders: next.pendingOrders,
+                        lastTrade: next.lastTrade,
+                        updatedAt: Date.now()
+                    });
                 });
             },
             async broadcast(note) {
@@ -3175,7 +3429,7 @@
                     const ref = accountRef(uid);
                     const snap = await tx.get(ref);
                     if (!snap.exists()) throw new Error('이미 삭제된 계좌입니다.');
-                    tx.update(ref, { cash: INITIAL_CASH, holdings: {}, updatedAt: Date.now() });
+                    tx.update(ref, { cash: INITIAL_CASH, holdings: {}, pendingOrders: [], updatedAt: Date.now() });
                 });
             },
             async setHideAdminFromRanking(hide) {
@@ -3265,6 +3519,7 @@
         return diff > 0 ? '▲' : (diff < 0 ? '▼' : '-');
     }
 
+    // cash 는 미체결 매수 주문에 묶인 현금(lockedCash)까지 더한 보유 현금입니다.
     function getAccountTotalValue(acc) {
         let stockEval = 0;
         Object.entries(acc.holdings || {}).forEach(([sid, h]) => {
@@ -3272,10 +3527,13 @@
                 stockEval += h.qty * stocks[sid].price;
             }
         });
+        const lockedCash = getLockedBuyCash(acc);
         return {
-            cash: acc.cash,
+            cash: acc.cash + lockedCash,
+            availableCash: acc.cash,
+            lockedCash,
             stockEval,
-            total: acc.cash + stockEval
+            total: acc.cash + lockedCash + stockEval
         };
     }
 
@@ -3292,7 +3550,15 @@
         const loginBtn = document.getElementById('loginOpenBtn');
         const badge = document.getElementById('orderUserBadge');
         const adminBtn = document.getElementById('adminOpenBtn');
+        const propertyBtn = document.getElementById('myPropertyNavBtn');
+        const pendingBadge = document.getElementById('pendingCountNavBadge');
         const acc = getCurrentAccount();
+        const pendingCount = acc ? acc.pendingOrders.length : 0;
+
+        propertyBtn.classList.toggle('hidden', !acc);
+        propertyBtn.classList.toggle('flex', Boolean(acc));
+        pendingBadge.classList.toggle('hidden', pendingCount === 0);
+        pendingBadge.textContent = pendingCount.toLocaleString();
 
         adminBtn.classList.toggle('hidden', !isAdmin());
         adminBtn.classList.toggle('flex', isAdmin());
@@ -3539,7 +3805,30 @@
         ctx.fillRect(0, 0, W, H);
 
         const st = stocks[selectedStockId];
-        const candles = getChartCandles(st, selectedTimeframe);
+        const fullCandles = getFullTimeframeCandles(st, selectedTimeframe);
+        const candles = fullCandles.slice(-CHART_CANDLES);
+        const startOffset = fullCandles.length - candles.length;
+
+        // 화면 밖 이전 봉까지 포함해 이동평균을 구하고, 봉이 기간보다 적으면 있는 봉만으로 평균합니다.
+        const maSeries = {};
+        const legendHtml = [];
+        MA_CONFIGS.forEach(cfg => {
+            if (!activeMAs[cfg.period]) return;
+            const pts = candles.map((_, i) => {
+                const fi = startOffset + i;
+                const cnt = Math.min(cfg.period, fi + 1);
+                let sum = 0;
+                for (let k = fi - cnt + 1; k <= fi; k++) sum += fullCandles[k].close;
+                return sum / cnt;
+            });
+            maSeries[cfg.period] = pts;
+            if (pts.length) {
+                const last = Math.round(pts[pts.length - 1]).toLocaleString();
+                legendHtml.push(`<span style="color:${cfg.color};font-weight:700">${cfg.label}:${last}</span>`);
+            }
+        });
+        document.getElementById('maValueLegend').innerHTML = legendHtml.join('');
+
         ctx.font = "12px 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
         if (candles.length === 0) {
             ctx.fillStyle = '#64748b';
@@ -3557,6 +3846,10 @@
             if (c.low < minP) minP = c.low;
             if (c.high > maxP) maxP = c.high;
         });
+        Object.values(maSeries).forEach(pts => pts.forEach(v => {
+            if (v < minP) minP = v;
+            if (v > maxP) maxP = v;
+        }));
         const margin = Math.max((maxP - minP) * 0.12, getTickSize(st.price) * 4);
         minP = Math.max(0, minP - margin);
         maxP += margin;
@@ -3597,6 +3890,20 @@
 
             ctx.fillStyle = color;
             ctx.fillRect(cx - bodyW / 2, Math.min(yOpen, yClose), bodyW, Math.max(2, Math.abs(yClose - yOpen)));
+        });
+
+        MA_CONFIGS.forEach(cfg => {
+            const pts = maSeries[cfg.period];
+            if (!pts || pts.length < 2) return;
+            ctx.strokeStyle = cfg.color;
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            pts.forEach((v, idx) => {
+                const cx = padLeft + idx * stepW + stepW / 2;
+                if (idx === 0) ctx.moveTo(cx, toY(v));
+                else ctx.lineTo(cx, toY(v));
+            });
+            ctx.stroke();
         });
 
         const yNow = toY(st.price);
@@ -3695,13 +4002,60 @@
         return Number(document.getElementById('inputOrderQty').value);
     }
 
+    // 장중에 매수는 현재가 이상, 매도는 현재가 이하면 즉시 체결, 그 밖에는 지정가 대기, 장 마감 중에는 예약 주문입니다.
+    function getOrderExecMode(side, orderPrice, curPrice, marketOpen) {
+        if (!marketOpen) return 'RESERVED';
+        const immediate = side === 'BUY' ? orderPrice >= curPrice : orderPrice <= curPrice;
+        return immediate ? 'IMMEDIATE' : 'LIMIT';
+    }
+
+    const EXEC_MODE_BADGES = {
+        IMMEDIATE: ['font-extrabold text-emerald-400', '즉시 체결 (현재가)'],
+        LIMIT: ['font-extrabold text-amber-300', '지정가 대기 주문'],
+        RESERVED: ['font-extrabold text-violet-300', '장외 예약 주문 (06:00 개장 후 체결)']
+    };
+
+    function pendingOrderLabel(o) {
+        return `${o.orderType === 'RESERVED' ? '예약' : '지정가'} ${o.side === 'BUY' ? '매수' : '매도'}`;
+    }
+
+    function renderTradePendingList(acc) {
+        const orders = acc ? acc.pendingOrders : [];
+        document.getElementById('pendingOrderCount').textContent = orders.length.toLocaleString();
+        const list = document.getElementById('tradePendingList');
+        if (orders.length === 0) {
+            list.innerHTML = '<div class="py-2 text-center text-slate-500">대기 중인 주문이 없습니다.</div>';
+            return;
+        }
+        list.innerHTML = orders.map(o => `
+            <div class="flex items-center justify-between gap-2 py-1.5 px-1">
+                <div class="min-w-0">
+                    <span class="font-bold ${o.side === 'BUY' ? 'kr-up' : 'kr-down'}">${pendingOrderLabel(o)}</span>
+                    <span class="text-white font-bold ml-1">${stocks[o.stockId].name}</span>
+                    <div class="text-slate-400">${o.targetPrice.toLocaleString()}원 × ${o.qty.toLocaleString()}주</div>
+                </div>
+                <button
+                    data-cancel-order="${o.id}"
+                    class="shrink-0 px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold"
+                >취소</button>
+            </div>
+        `).join('');
+    }
+
     function renderTradeOrderInfo() {
         const st = stocks[selectedStockId];
         const qty = readOrderQty();
-        const total = Number.isInteger(qty) && qty > 0 ? st.price * qty : 0;
+        const rawPrice = Number(document.getElementById('inputOrderPrice').value);
+        const orderPrice = rawPrice > 0 ? alignToTick(rawPrice) : st.price;
+        const mode = getOrderExecMode(currentTradeSide, orderPrice, st.price, isMarketOpen(Date.now()));
+        const unitPrice = mode === 'IMMEDIATE' ? st.price : orderPrice;
+        const total = Number.isInteger(qty) && qty > 0 ? unitPrice * qty : 0;
         document.getElementById('orderTotalText').textContent = `${total.toLocaleString()}원`;
+        const badge = document.getElementById('orderExecModeBadge');
+        [badge.className, badge.textContent] = EXEC_MODE_BADGES[mode];
 
         const acc = getCurrentAccount();
+        renderTradePendingList(acc);
         if (!acc) {
             document.getElementById('myCashText').textContent = '로그인 필요';
             document.getElementById('myStockQtyText').textContent = '0주';
@@ -3729,10 +4083,10 @@
         }
 
         if (currentTradeSide === 'BUY') {
-            const maxBuy = Math.floor(acc.cash / st.price);
+            const maxBuy = Math.floor(acc.cash / unitPrice);
             document.getElementById('availQtyHint').textContent = `최대 매수가능: ${maxBuy.toLocaleString()}주`;
         } else {
-            document.getElementById('availQtyHint').textContent = `매도가능 보유: ${hold.qty.toLocaleString()}주`;
+            document.getElementById('availQtyHint').textContent = `매도가능 보유: ${getSellableQty(acc, selectedStockId).toLocaleString()}주`;
         }
     }
 
@@ -3847,9 +4201,13 @@
             return;
         }
         const st = stocks[selectedStockId];
+        const rawPrice = Number(document.getElementById('inputOrderPrice').value);
+        const orderPrice = rawPrice > 0 ? alignToTick(rawPrice) : st.price;
+        const mode = getOrderExecMode(currentTradeSide, orderPrice, st.price, isMarketOpen(Date.now()));
+        const unitPrice = mode === 'IMMEDIATE' ? st.price : orderPrice;
         const maxQty = currentTradeSide === 'BUY'
-            ? Math.floor(acc.cash / st.price)
-            : (acc.holdings[selectedStockId] ? acc.holdings[selectedStockId].qty : 0);
+            ? Math.floor(acc.cash / unitPrice)
+            : getSellableQty(acc, selectedStockId);
         const qty = Math.floor(maxQty * ratio);
 
         if (qty < 1) {
@@ -3872,11 +4230,6 @@
             return;
         }
 
-        if (!isMarketOpen(Date.now())) {
-            showToast('현재 장 마감 시간(00:00~05:59)입니다. 06:00 이후에 거래해 주세요.', 'error');
-            return;
-        }
-
         const st = stocks[selectedStockId];
         const execPrice = st.price;
         const orderPrice = Number(document.getElementById('inputOrderPrice').value);
@@ -3896,25 +4249,25 @@
             showToast(`상한가(${upper}원) ~ 하한가(${lower}원) 범위 내에서만 주문할 수 있습니다.`, 'error');
             return;
         }
-        if (currentTradeSide === 'BUY' && orderPrice < execPrice) {
-            showToast(`즉시 체결을 위해 현재가(${execPrice.toLocaleString()}원) 이상으로 단가를 입력해 주세요.`, 'error');
-            return;
-        }
-        if (currentTradeSide === 'SELL' && orderPrice > execPrice) {
-            showToast(`즉시 체결을 위해 현재가(${execPrice.toLocaleString()}원) 이하로 단가를 입력해 주세요.`, 'error');
-            return;
-        }
-
         const side = currentTradeSide;
         const stockId = selectedStockId;
         const mainBtn = document.getElementById('mainOrderBtn');
         tradeBusy = true;
         mainBtn.disabled = true;
         try {
-            await backend.trade(acc => applyTradeToAccount(acc, side, stockId, orderQty, execPrice));
+            const targetPrice = alignToTick(orderPrice);
+            const mode = getOrderExecMode(side, targetPrice, execPrice, isMarketOpen(Date.now()));
             const sideLabel = side === 'BUY' ? '매수' : '매도';
-            const detail = `${st.name} ${orderQty.toLocaleString()}주 (${execPrice.toLocaleString()}원)`;
-            showToast(`[${sideLabel} 체결] ${detail}`, side === 'BUY' ? 'buy' : 'sell');
+            if (mode === 'IMMEDIATE') {
+                await backend.trade(acc => applyTradeToAccount(acc, side, stockId, orderQty, execPrice));
+                const detail = `${st.name} ${orderQty.toLocaleString()}주 (${execPrice.toLocaleString()}원)`;
+                showToast(`⚡ [즉시 ${sideLabel} 체결] ${detail}`, side === 'BUY' ? 'buy' : 'sell');
+            } else {
+                await backend.trade(acc => applyAddPendingOrder(acc, side, stockId, orderQty, targetPrice, mode));
+                const kindLabel = mode === 'RESERVED' ? '장외예약' : '지정가대기';
+                const detail = `${st.name} ${orderQty.toLocaleString()}주 (${targetPrice.toLocaleString()}원)`;
+                showToast(`🎯 [${kindLabel} ${sideLabel} 등록] ${detail}`, 'info');
+            }
         } catch (err) {
             showToast(describeError(err), 'error');
         } finally {
@@ -4088,7 +4441,10 @@
         hideToggle.disabled = adminBusy;
         const tbody = document.getElementById('adminAccountRows');
         const list = Object.values(accounts)
-            .map(acc => ({ ...acc, total: getAccountTotalValue(acc).total }))
+            .map(acc => {
+                const { cash, total } = getAccountTotalValue(acc);
+                return { ...acc, heldCash: cash, total };
+            })
             .sort((a, b) => a.nickname.localeCompare(b.nickname, 'ko'));
 
         document.getElementById('adminAccountCount').textContent = list.length.toLocaleString();
@@ -4121,7 +4477,7 @@
 
             const cashTd = document.createElement('td');
             cashTd.className = 'py-2 px-3 text-right text-slate-400';
-            cashTd.textContent = `${acc.cash.toLocaleString()}원`;
+            cashTd.textContent = `${acc.heldCash.toLocaleString()}원`;
 
             const actionTd = document.createElement('td');
             actionTd.className = 'py-2 px-3 text-right';
@@ -4208,20 +4564,93 @@
 
     function renderMyAssetModal(acc) {
         if (!isMyAssetModalOpen()) return;
-        const { cash, stockEval, total } = getAccountTotalValue(acc);
+        const { availableCash, lockedCash, stockEval, total } = getAccountTotalValue(acc);
+        const holdings = Object.entries(acc.holdings).filter(([sid, h]) => h.qty > 0 && stocks[sid]);
+        const costBasis = holdings.reduce((sum, [, h]) => sum + h.qty * h.avgPrice, 0);
         const profit = total - INITIAL_CASH;
         const rate = (profit / INITIAL_CASH) * 100;
         const signedRate = `${rate > 0 ? '+' : ''}${rate.toFixed(2)}%`;
-        document.getElementById('myAssetTitle').textContent = `${acc.nickname} 님의 자산`;
+        const stockProfit = stockEval - costBasis;
+        const stockRate = costBasis > 0 ? (stockProfit / costBasis) * 100 : 0;
+
+        document.getElementById('myAssetTitle').textContent = `${acc.nickname} 님의 재산 및 포트폴리오`;
         document.getElementById('myAssetTotal').textContent = `${total.toLocaleString()}원`;
-        document.getElementById('myAssetCash').textContent = `${cash.toLocaleString()}원`;
+        document.getElementById('myAssetCash').textContent = `${availableCash.toLocaleString()}원`;
+        document.getElementById('myAssetLockedCash').textContent = `${lockedCash.toLocaleString()}원`;
+        document.getElementById('myAssetCostBasis').textContent = `${Math.round(costBasis).toLocaleString()}원`;
         document.getElementById('myAssetStock').textContent = `${stockEval.toLocaleString()}원`;
         const profitEl = document.getElementById('myAssetProfit');
         profitEl.className = `text-xs font-bold ${colorFor(profit)}`;
         profitEl.textContent = `${arrowFor(profit)} ${Math.abs(profit).toLocaleString()}원 (${signedRate})`;
         const rateEl = document.getElementById('myAssetRate');
-        rateEl.className = `font-extrabold ${colorFor(rate)}`;
-        rateEl.textContent = signedRate;
+        rateEl.className = `font-extrabold ${colorFor(stockRate)}`;
+        rateEl.textContent = `${stockRate > 0 ? '+' : ''}${stockRate.toFixed(2)}%`;
+
+        document.getElementById('myHoldingsTableBody').innerHTML = holdings.length ? holdings.map(([sid, h]) => {
+            const st = stocks[sid];
+            const cost = h.qty * h.avgPrice;
+            const evalAmt = h.qty * st.price;
+            const p = evalAmt - cost;
+            const pr = cost > 0 ? (p / cost) * 100 : 0;
+            const weight = total > 0 ? (evalAmt / total) * 100 : 0;
+            return `
+                <tr>
+                    <td class="py-2 px-3 font-bold text-white">${st.name}</td>
+                    <td class="py-2 px-3 text-right">${h.qty.toLocaleString()}주</td>
+                    <td class="py-2 px-3 text-right">${Math.round(h.avgPrice).toLocaleString()}원</td>
+                    <td class="py-2 px-3 text-right">${st.price.toLocaleString()}원</td>
+                    <td class="py-2 px-3 text-right font-bold ${colorFor(p)}">
+                        ${p > 0 ? '+' : ''}${Math.round(p).toLocaleString()}원 (${pr > 0 ? '+' : ''}${pr.toFixed(2)}%)
+                    </td>
+                    <td class="py-2 px-3 text-right">${weight.toFixed(1)}%</td>
+                </tr>`;
+        }).join('') : '<tr><td colspan="6" class="py-4 text-center text-slate-500">보유 중인 주식이 없습니다.</td></tr>';
+
+        const orders = acc.pendingOrders;
+        document.getElementById('myPendingModalBody').innerHTML = orders.length ? orders.map(o => `
+            <tr>
+                <td class="py-2 px-3 font-bold ${o.side === 'BUY' ? 'kr-up' : 'kr-down'}">${pendingOrderLabel(o)}</td>
+                <td class="py-2 px-3 text-white">${stocks[o.stockId].name}</td>
+                <td class="py-2 px-3 text-right">${o.targetPrice.toLocaleString()}원</td>
+                <td class="py-2 px-3 text-right">${o.qty.toLocaleString()}주</td>
+                <td class="py-2 px-3 text-right">
+                    <button
+                        data-cancel-order="${o.id}"
+                        class="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold"
+                    >취소</button>
+                </td>
+            </tr>
+        `).join('') : '<tr><td colspan="5" class="py-4 text-center text-slate-500">대기 중인 주문이 없습니다.</td></tr>';
+    }
+
+    window.toggleMA = function(period) {
+        activeMAs[period] = !activeMAs[period];
+        renderMAButtons();
+        drawCandleChart();
+    };
+
+    function renderMAButtons() {
+        MA_CONFIGS.forEach(cfg => {
+            const btn = document.getElementById(`maBtn_${cfg.period}`);
+            const on = activeMAs[cfg.period];
+            btn.style.borderColor = on ? cfg.color : '#334155';
+            btn.style.color = on ? cfg.color : '#64748b';
+            btn.textContent = `${cfg.period}선${on ? ' ON' : ''}`;
+        });
+    }
+
+    async function cancelPendingOrder(orderId) {
+        if (tradeBusy || !backend || !getCurrentAccount()) return;
+        tradeBusy = true;
+        try {
+            await backend.trade(acc => applyCancelPendingOrder(acc, orderId));
+            showToast('주문이 취소되었습니다.', 'info');
+        } catch (err) {
+            showToast(describeError(err), 'error');
+        } finally {
+            tradeBusy = false;
+            refreshAllViews();
+        }
     }
 
     window.openMyAssetModal = function() {
@@ -4400,6 +4829,14 @@
             const btn = e.target.closest('button[data-action]');
             if (btn && !btn.disabled) handleAdminAction(btn.dataset.action, btn.dataset.id);
         });
+
+        ['tradePendingList', 'myPendingModalBody'].forEach(id => {
+            document.getElementById(id).addEventListener('click', e => {
+                const btn = e.target.closest('button[data-cancel-order]');
+                if (btn) cancelPendingOrder(btn.dataset.cancelOrder);
+            });
+        });
+        renderMAButtons();
 
         setupScrollFades();
 

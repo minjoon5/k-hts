@@ -28,49 +28,125 @@ service cloud.firestore {
         && (!(n.lower() in ['master', 'admin']) || (isAdmin() && n == myAdminNickname()));
     }
 
-    function priceLimits() {
-      return {
-        'A': [35000, 105000],
-        'B': [60000, 180000],
-        'C': [22500, 67500],
-        'D': [42500, 127500],
-        'E': [27500, 82500],
-        'F': [16000, 48000],
-        'G': [32000, 96000],
-        'H': [47500, 142500],
-        'I': [14000, 42000],
-        'J': [24000, 72000]
-      };
+    function stockIds() {
+      return ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    }
+
+    // 상·하한가가 매일 전일 종가 기준으로 바뀌므로 가격은 양의 정수인지만 확인합니다.
+    function validPrice(p) {
+      return p is int && p > 0 && p <= 100000000;
     }
 
     function marketOpen() {
       return request.time.hours() < 15 || request.time.hours() >= 21;
     }
 
-    function validTrade(before, after) {
-      let t = after.lastTrade;
-      let id = t.stock;
-      let lim = priceLimits()[id];
+    function pendingOf(d) {
+      return d.get('pendingOrders', []);
+    }
+
+    // id 종목의 보유 수량이 정확히 delta 만큼 바뀌고 다른 종목은 그대로인지 확인합니다.
+    function holdingChange(before, after, id, delta) {
       let oldQty = before.holdings.get(id, {'qty': 0}).qty;
       let h = after.holdings.get(id, null);
       let newQty = h == null ? 0 : h.qty;
-      return t is map
-        && t.keys().hasAll(['stock', 'side', 'qty', 'price'])
-        && t.keys().hasOnly(['stock', 'side', 'qty', 'price'])
-        && id in priceLimits()
-        && t.qty is int && t.qty > 0
-        && t.price is int && t.price >= lim[0] && t.price <= lim[1]
-        && after.holdings is map
+      return after.holdings is map
         && after.holdings.diff(before.holdings).affectedKeys().hasOnly([id])
         && (h == null || (
           h.keys().hasOnly(['qty', 'avgPrice'])
           && h.qty is int && h.qty > 0
-          && h.avgPrice is number && h.avgPrice >= lim[0] - 1 && h.avgPrice <= lim[1] + 1))
+          && h.avgPrice is number && h.avgPrice > 0))
+        && newQty == oldQty + delta;
+    }
+
+    // 즉시 체결 (장중에만)
+    function validTrade(before, after) {
+      let t = after.lastTrade;
+      return t.keys().hasAll(['stock', 'side', 'qty', 'price'])
+        && t.keys().hasOnly(['stock', 'side', 'qty', 'price'])
+        && t.stock in stockIds()
+        && t.qty is int && t.qty > 0
+        && validPrice(t.price)
+        && pendingOf(after) == pendingOf(before)
         && after.cash is int && after.cash >= 0
         && (
-          (t.side == 'BUY' && newQty == oldQty + t.qty && after.cash == before.cash - t.qty * t.price)
-          || (t.side == 'SELL' && newQty == oldQty - t.qty && after.cash == before.cash + t.qty * t.price)
+          (t.side == 'BUY' && holdingChange(before, after, t.stock, t.qty)
+            && after.cash == before.cash - t.qty * t.price)
+          || (t.side == 'SELL' && holdingChange(before, after, t.stock, -t.qty)
+            && after.cash == before.cash + t.qty * t.price)
         );
+    }
+
+    function validOrder(o) {
+      return o is map
+        && o.keys().hasAll(['id', 'stockId', 'side', 'qty', 'targetPrice', 'orderType', 'createdAt'])
+        && o.keys().hasOnly(['id', 'stockId', 'side', 'qty', 'targetPrice', 'orderType', 'createdAt'])
+        && o.id is string && o.id.matches('^[A-Za-z0-9_-]{1,40}$')
+        && o.stockId in stockIds()
+        && o.side in ['BUY', 'SELL']
+        && o.qty is int && o.qty > 0
+        && validPrice(o.targetPrice)
+        && o.orderType in ['LIMIT', 'RESERVED']
+        && o.createdAt is number;
+    }
+
+    // 지정가·예약 주문 접수 (장 마감 중에도 가능). 매수는 주문금액만큼 현금을 묶습니다.
+    function validPlace(before, after) {
+      let t = after.lastTrade;
+      let o = t.order;
+      let pend = pendingOf(before);
+      return t.keys().hasOnly(['kind', 'order'])
+        && validOrder(o)
+        && pend.size() < 20
+        && !(o in pend)
+        && pendingOf(after) == pend.concat([o])
+        && after.holdings == before.holdings
+        && after.cash is int && after.cash >= 0
+        && (
+          (o.side == 'BUY' && after.cash == before.cash - o.qty * o.targetPrice)
+          || (o.side == 'SELL' && after.cash == before.cash
+            && before.holdings.get(o.stockId, {'qty': 0}).qty >= o.qty)
+        );
+    }
+
+    // 미체결 주문 취소. 매수는 묶인 현금을 돌려줍니다.
+    function validCancel(before, after) {
+      let t = after.lastTrade;
+      let o = t.order;
+      let pend = pendingOf(before);
+      return t.keys().hasOnly(['kind', 'order'])
+        && o in pend
+        && pendingOf(after) == pend.removeAll([o])
+        && after.holdings == before.holdings
+        && after.cash == before.cash + (o.side == 'BUY' ? o.qty * o.targetPrice : 0);
+    }
+
+    // 미체결 주문 체결 (장중에만). 지정가보다 같거나 유리한 가격이어야 합니다.
+    function validFill(before, after) {
+      let t = after.lastTrade;
+      let o = t.order;
+      let pend = pendingOf(before);
+      return t.keys().hasOnly(['kind', 'order', 'price'])
+        && o in pend
+        && pendingOf(after) == pend.removeAll([o])
+        && validPrice(t.price)
+        && after.cash is int && after.cash >= 0
+        && (
+          (o.side == 'BUY' && t.price <= o.targetPrice
+            && holdingChange(before, after, o.stockId, o.qty)
+            && after.cash == before.cash + o.qty * (o.targetPrice - t.price))
+          || (o.side == 'SELL' && t.price >= o.targetPrice
+            && holdingChange(before, after, o.stockId, -o.qty)
+            && after.cash == before.cash + o.qty * t.price)
+        );
+    }
+
+    function validAccountChange(before, after) {
+      let kind = after.lastTrade.get('kind', 'TRADE');
+      return (kind == 'TRADE' && marketOpen() && validTrade(before, after))
+        || (kind == 'PLACE' && validPlace(before, after))
+        || (kind == 'CANCEL' && validCancel(before, after))
+        || (kind == 'FILL' && marketOpen() && validFill(before, after));
     }
 
     match /nicknames/{name} {
@@ -107,10 +183,10 @@ service cloud.firestore {
 
       allow update: if signedIn()
         && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'lastTrade', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'pendingOrders', 'lastTrade', 'updatedAt'])
         && request.resource.data.updatedAt is number
-        && marketOpen()
-        && validTrade(resource.data, request.resource.data);
+        && request.resource.data.lastTrade is map
+        && validAccountChange(resource.data, request.resource.data);
 
       allow update: if isAdmin()
         && request.auth.uid == uid
@@ -119,10 +195,11 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/nicknames/$(request.resource.data.nickname)).data.uid == uid;
 
       allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cash', 'holdings', 'pendingOrders', 'updatedAt'])
         && request.resource.data.cash == 50000000
         && request.resource.data.holdings is map
-        && request.resource.data.holdings.size() == 0;
+        && request.resource.data.holdings.size() == 0
+        && pendingOf(request.resource.data).size() == 0;
 
       allow delete: if isAdmin();
     }
