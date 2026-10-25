@@ -1660,6 +1660,13 @@
             margin: 0;
         }
 
+        .nav-email {
+            max-width: 12rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .scroll-fade {
             --bg: 19, 23, 34;
             --fade-size: 28px;
@@ -1883,6 +1890,11 @@
                 class="hidden bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded-full"
             >0</span>
         </button>
+        <span
+            id="navUserEmail"
+            class="nav-email hidden text-[11px] text-slate-400"
+            title="현재 로그인된 Google 계정"
+        ></span>
         <div
             id="loggedInUserBox"
             class="hidden items-center gap-2 bg-[#0b0e14] px-3 py-1.5 rounded-lg border border-slate-800 text-xs"
@@ -3717,6 +3729,10 @@
         const pendingBadge = document.getElementById('pendingCountNavBadge');
         const acc = getCurrentAccount();
         const pendingCount = acc ? acc.pendingOrders.length : 0;
+
+        const emailEl = document.getElementById('navUserEmail');
+        emailEl.textContent = authUser && authUser.email ? authUser.email : '';
+        emailEl.classList.toggle('hidden', !(authUser && authUser.email));
 
         propertyBtn.classList.toggle('hidden', !acc);
         propertyBtn.classList.toggle('flex', Boolean(acc));
