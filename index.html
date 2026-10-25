@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.2.1">
+    <meta name="app-version" content="1.2.2">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -1562,7 +1562,6 @@
                 height: auto;
             }
 
-            /* 100vh 는 모바일·태블릿 브라우저에서 주소창 뒤까지 포함해 아래가 잘리므로 보이는 높이(dvh)를 씁니다. */
             .lg\:h-screen {
                 height: 100vh;
                 height: 100dvh;
@@ -2892,12 +2891,10 @@
             stockId: COMPANY_META[idx].id,
             day,
             rng: createRng(hash3(idx + 1, day, SIM_VERSION)),
-            // 거래량은 가격 난수열을 건드리지 않도록 별도 해시로 만듭니다.
             volSeed: hash3(idx + 1, day, 0x564f4c),
             limits,
             steps: 0,
             price: open,
-            // 상·하한가에 닿으면 그날 장 마감까지 그 가격에 고정됩니다.
             lockedLimit: null,
             candle: { day, open, high: open, low: open, close: open, volume: 0 },
             buckets: []
@@ -2982,7 +2979,6 @@
     }
 
     function isValidCachedCandle(e) {
-        // [시가, 고가, 저가, 종가, 거래량] — 거래량이 없는 예전 캐시는 다시 계산합니다.
         return Array.isArray(e) && e.length === 5 && e.every(v => Number.isFinite(v) && v >= 0) && e.slice(0, 4).every(v => v > 0);
     }
 
@@ -3000,7 +2996,6 @@
     let activeMAs = { 5: true, 10: false, 20: true, 60: false, 120: false };
     let activeIndicators = { bb: false, vol: true, rsi: false };
 
-    // 작도한 선은 종목·봉 단위별로 저장합니다. 점의 idx는 봉 단위별 절대 위치라 날이 바뀌어도 같은 봉을 가리킵니다.
     const LS_DRAWINGS = 'khts.drawings.v1';
     const DRAW_TOOLS = ['NONE', 'TREND', 'RAY', 'HLINE', 'VLINE'];
     let chartDrawings = (() => {
@@ -3034,7 +3029,6 @@
             let price = meta.basePrice;
             let prevBuckets = [];
 
-            // 상장일부터 실제로 쌓인 시세만 씁니다. 상·하한가는 매일 시가(전일 종가) 기준입니다.
             for (let d = EPOCH_DAY; d < today; d++) {
                 const k = d - EPOCH_DAY;
                 const needBuckets = today - d <= INTRADAY_DAYS;
@@ -3155,7 +3149,6 @@
         return st.daily.concat([{ ...st.session.candle }]);
     }
 
-    // 이동평균선 계산을 위해 잘라내지 않은 전체 봉을 돌려줍니다.
     function getFullTimeframeCandles(st, tf) {
         const intraday = () => st.prevBuckets.concat(st.session.buckets);
         if (tf === '5m') return intraday();
@@ -3169,7 +3162,6 @@
         });
     }
 
-    // 분봉은 최근 며칠치만 들고 있어 0번 봉이 매일 바뀌므로, 상장일 기준 절대 위치로 바꿀 때 더할 값을 구합니다.
     function getTimeframeBaseIndex(st, tf) {
         const perDay = { '5m': 1, '15m': 3, '30m': 6 }[tf];
         if (!perDay) return 0;
@@ -3225,7 +3217,6 @@
         return out;
     }
 
-    // 지정가·예약 주문. firestore.rules 의 validOrder() 와 필드가 같아야 합니다.
     function normalizePendingOrders(raw) {
         if (!Array.isArray(raw)) return [];
         return raw.filter(o => o
@@ -3294,7 +3285,6 @@
         return { cash: acc.cash + price * qty, holdings, pendingOrders: acc.pendingOrders, lastTrade: { stock: stockId, side, qty, price } };
     }
 
-    // 매수 지정가·예약 주문은 접수할 때 주문금액만큼 현금을 묶어 둡니다.
     function applyAddPendingOrder(acc, side, stockId, qty, targetPrice, orderType) {
         if (acc.pendingOrders.length >= MAX_PENDING_ORDERS) {
             throw new Error(`미체결 주문은 최대 ${MAX_PENDING_ORDERS}건까지 걸어 둘 수 있습니다.`);
@@ -3328,7 +3318,6 @@
         };
     }
 
-    // 지정가보다 유리한 현재가로 체결하고, 매수는 묶어 둔 현금과의 차액을 돌려줍니다.
     function applyFillPendingOrder(acc, order, price) {
         const holdings = { ...acc.holdings };
         const prev = holdings[order.stockId] || { qty: 0, avgPrice: 0 };
@@ -3363,7 +3352,6 @@
     let pendingCheckBusy = false;
     let pendingRetryAt = 0;
 
-    // 장중에 현재가가 지정가에 닿은 내 주문을 한 건씩 체결합니다. (접속해 있는 동안 동작)
     async function checkAndExecutePendingOrders() {
         if (pendingCheckBusy || tradeBusy || !backend || Date.now() < pendingRetryAt) return;
         const acc = getCurrentAccount();
@@ -3435,7 +3423,6 @@
 
         const accountRef = uid => doc(db, 'accounts', uid);
 
-        // 관리자 계좌의 닉네임을 관리자 전용 닉네임으로 바꿉니다. (예: 기존 admin → master)
         async function renameAdminAccount(uid, nickname) {
             await runTransaction(db, async tx => {
                 const ref = accountRef(uid);
@@ -3673,7 +3660,6 @@
         return diff > 0 ? '▲' : (diff < 0 ? '▼' : '-');
     }
 
-    // cash 는 미체결 매수 주문에 묶인 현금(lockedCash)까지 더한 보유 현금입니다.
     function getAccountTotalValue(acc) {
         let stockEval = 0;
         Object.entries(acc.holdings || {}).forEach(([sid, h]) => {
@@ -3800,7 +3786,6 @@
             tbody.replaceChildren(...list.map(() => createLeaderRow()));
         }
 
-        // 총자산이 같으면 공동 순위 (예: 1, 1, 3위)
         const ranks = [];
         list.forEach((item, idx) => {
             ranks[idx] = idx > 0 && item.total === list[idx - 1].total ? ranks[idx - 1] : idx + 1;
@@ -3987,7 +3972,6 @@
         const candles = fullCandles.slice(-CHART_CANDLES);
         const startOffset = fullCandles.length - candles.length;
 
-        // 화면 밖 이전 봉까지 포함해 이동평균을 구하고, 봉이 기간보다 적으면 있는 봉만으로 평균합니다.
         const maSeries = {};
         const legendHtml = [];
         MA_CONFIGS.forEach(cfg => {
@@ -4006,7 +3990,6 @@
             }
         });
 
-        // 볼린저 밴드: 20봉 이동평균 ± 2표준편차
         let bbSeries = null;
         if (activeIndicators.bb) {
             bbSeries = candles.map((_, i) => {
@@ -4026,7 +4009,6 @@
             }
         }
 
-        // RSI(14): 와일더 평활 방식
         let rsiSeries = null;
         if (activeIndicators.rsi) {
             const fullRsi = new Array(fullCandles.length).fill(50);
@@ -4067,7 +4049,6 @@
         const padTop = 20, padBottom = 20, padLeft = 16, padRight = 72;
         const plotW = W - padLeft - padRight;
         const totalH = H - padTop - padBottom;
-        // 거래량·RSI가 켜지면 가격 차트 아래에 보조 차트를 나눠 그립니다.
         const subCount = (activeIndicators.vol ? 1 : 0) + (activeIndicators.rsi ? 1 : 0);
         const priceRatio = subCount === 2 ? 0.56 : (subCount === 1 ? 0.74 : 1);
         const subGap = 12;
@@ -4220,7 +4201,6 @@
                 const x1 = idxToX(ln.p1.idx), y1 = toY(ln.p1.price);
                 let x2 = idxToX(ln.p2.idx), y2 = toY(ln.p2.price);
                 if (ln.type === 'RAY') {
-                    // 시작점에서 방향점 쪽으로 화면 밖까지 늘립니다.
                     const len = Math.hypot(x2 - x1, y2 - y1);
                     const scale = len > 0 ? (plotW + plotH) * 2 / len : 1;
                     x2 = x1 + (x2 - x1) * scale;
@@ -4383,7 +4363,6 @@
         return Number(document.getElementById('inputOrderQty').value);
     }
 
-    // 장중에 매수는 현재가 이상, 매도는 현재가 이하면 즉시 체결, 그 밖에는 지정가 대기, 장 마감 중에는 예약 주문입니다.
     function getOrderExecMode(side, orderPrice, curPrice, marketOpen) {
         if (!marketOpen) return 'RESERVED';
         const immediate = side === 'BUY' ? orderPrice >= curPrice : orderPrice <= curPrice;
@@ -4786,7 +4765,6 @@
 
     window.closeProfileModal = closeProfileModal;
 
-    // 관리자는 닉네임을 묻지 않고 바로 admin 계좌를 만듭니다.
     function promptProfile() {
         if (isAdmin()) createAccount(myAdminNickname());
         else openProfileModal();
@@ -5116,7 +5094,6 @@
             btn.style.color = on ? '#fbbf24' : '#94a3b8';
             btn.style.backgroundColor = on ? 'rgba(251, 191, 36, 0.12)' : 'transparent';
         });
-        // 작도 중에는 터치로 화면이 스크롤되지 않게 막습니다.
         document.getElementById('stockCandleCanvas').style.touchAction = currentDrawTool === 'NONE' ? '' : 'none';
         const msgs = {
             NONE: '도구를 선택해 차트 위에 보조선·추세선을 그리세요',
