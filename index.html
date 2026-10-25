@@ -1899,15 +1899,11 @@
             id="loggedInUserBox"
             class="hidden items-center gap-2 bg-[#0b0e14] px-3 py-1.5 rounded-lg border border-slate-800 text-xs"
         >
-            <button
-                onclick="openMyAssetModal()"
-                class="flex items-center gap-2 hover:opacity-80 transition"
-                title="내 자산 보기"
-            >
+            <div class="flex items-center gap-2">
                 <i class="fa-solid fa-user-astronaut text-blue-400"></i>
-                <span id="navUserName" class="font-bold text-white underline decoration-dotted underline-offset-4">게스트</span>
+                <span id="navUserName" class="font-bold text-white">게스트</span>
                 <span id="navUserAsset" class="text-amber-400 font-bold ml-1">50,000,000원</span>
-            </button>
+            </div>
             <button
                 onclick="switchGoogleAccount()"
                 class="ml-2 text-[11px] text-slate-400 hover:text-white underline"
