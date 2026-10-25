@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.2.4">
+    <meta name="app-version" content="1.2.5">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -3911,22 +3911,9 @@
     function renderTradeView() {
         if (currentScreen !== 'TRADE') return;
         const st = stocks[selectedStockId];
-       const fullCandles = getFullTimeframeCandles(st, selectedTimeframe);
-       const maxPan = Math.max(0, fullCandles.length - CHART_CANDLES);
-       if (chartPanOffset > maxPan) chartPanOffset = maxPan;
-       if (chartPanOffset < 0) chartPanOffset = 0;
-       const endIdx = fullCandles.length - chartPanOffset;
-       const startOffset = Math.max(0, endIdx - CHART_CANDLES);
-       const candles = fullCandles.slice(startOffset, endIdx);
-       const jumpBtn = document.getElementById('chartJumpLatestBtn');
-       const topResetBtn = document.getElementById('chartPanResetTopBtn');
-       if (jumpBtn) {
-           jumpBtn.classList.toggle('hidden', chartPanOffset === 0);
-           jumpBtn.classList.toggle('flex', chartPanOffset > 0);
-       }
-       if (topResetBtn) {
-           topResetBtn.classList.toggle('hidden', chartPanOffset === 0);
-       }
+        const diff = st.price - st.basePrice;
+        const rate = (diff / st.basePrice) * 100;
+        const colorClass = colorFor(diff);
 
         document.getElementById('trCodeBadge').textContent = st.code;
         document.getElementById('trStockTitle').textContent = st.name;
@@ -3997,8 +3984,21 @@
 
         const st = stocks[selectedStockId];
         const fullCandles = getFullTimeframeCandles(st, selectedTimeframe);
-        const candles = fullCandles.slice(-CHART_CANDLES);
-        const startOffset = fullCandles.length - candles.length;
+        const maxPan = Math.max(0, fullCandles.length - CHART_CANDLES);
+        if (chartPanOffset > maxPan) chartPanOffset = maxPan;
+        if (chartPanOffset < 0) chartPanOffset = 0;
+        const endIdx = fullCandles.length - chartPanOffset;
+        const startOffset = Math.max(0, endIdx - CHART_CANDLES);
+        const candles = fullCandles.slice(startOffset, endIdx);
+        const jumpBtn = document.getElementById('chartJumpLatestBtn');
+        const topResetBtn = document.getElementById('chartPanResetTopBtn');
+        if (jumpBtn) {
+            jumpBtn.classList.toggle('hidden', chartPanOffset === 0);
+            jumpBtn.classList.toggle('flex', chartPanOffset > 0);
+        }
+        if (topResetBtn) {
+            topResetBtn.classList.toggle('hidden', chartPanOffset === 0);
+        }
 
         const maSeries = {};
         const legendHtml = [];
@@ -4542,7 +4542,6 @@
             `;
         }).join('');
     }
-
     window.openNewsModal = function() {
         const modal = document.getElementById('newsModal');
         modal.classList.remove('hidden');
