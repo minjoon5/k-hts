@@ -3770,11 +3770,12 @@
         return tr;
     }
 
-    const RANK_STYLES = {
-        1: ['px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-xs', '🥇'],
-        2: ['px-2 py-0.5 rounded bg-slate-300 text-slate-950 font-extrabold text-xs', '🥈'],
-        3: ['px-2 py-0.5 rounded bg-amber-700 text-white font-extrabold text-xs', '🥉']
-    };
+    // index 0 = 1위, 1 = 2위, 2 = 3위
+    const RANK_STYLES = [
+        ['px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-xs', '🥇'],
+        ['px-2 py-0.5 rounded bg-slate-300 text-slate-950 font-extrabold text-xs', '🥈'],
+        ['px-2 py-0.5 rounded bg-amber-700 text-white font-extrabold text-xs', '🥉']
+    ];
 
     function renderLeaderboard() {
         const tbody = document.getElementById('leaderboardTableBody');
@@ -3813,7 +3814,7 @@
             const isTied = (idx > 0 && ranks[idx - 1] === rank) || ranks[idx + 1] === rank;
             const isMe = item.id === currentAccountId;
             const f = name => row.querySelector(`[data-f="${name}"]`);
-            const [rankClass, medal] = RANK_STYLES[rank] || [
+            const [rankClass, medal] = RANK_STYLES[rank - 1] || [
                 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold text-xs',
                 ''
             ];
