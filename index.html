@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.2.8">
+    <meta name="app-version" content="1.2.9">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -1705,7 +1705,9 @@
             position: absolute;
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.15s ease;
+            will-change: opacity;
+            transform: translateZ(0);
             z-index: 5;
             background: linear-gradient(var(--fade-dir),
                 rgb(var(--bg)) 0%,
@@ -1820,6 +1822,28 @@
             .lb-table th:first-child {
                 width: auto;
             }
+
+            #navActions {
+                flex-wrap: wrap;
+                width: 100%;
+                min-width: 0;
+            }
+
+            #navActions button,
+            #loggedInUserBox span {
+                white-space: nowrap;
+            }
+
+            #loggedInUserBox {
+                flex-wrap: wrap;
+                flex: 1 1 auto;
+                min-width: 0;
+                row-gap: 0.25rem;
+            }
+
+            #navUserEmail {
+                display: none !important;
+            }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -1895,7 +1919,7 @@
         <span class="text-[10px] text-slate-500 font-bold">KST</span>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div id="navActions" class="flex items-center gap-2">
         <button
             id="myPropertyNavBtn"
             onclick="openMyAssetModal()"
@@ -5382,10 +5406,10 @@
 
     function updateFadeEdges(edges, scroller) {
         const show = {
-            top: scroller.scrollTop > 1,
-            bottom: scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1,
-            left: scroller.scrollLeft > 1,
-            right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1
+            top: scroller.scrollTop > 2,
+            bottom: Math.ceil(scroller.scrollTop + scroller.clientHeight) < scroller.scrollHeight - 2,
+            left: scroller.scrollLeft > 2,
+            right: Math.ceil(scroller.scrollLeft + scroller.clientWidth) < scroller.scrollWidth - 2
         };
         Object.entries(edges).forEach(([side, edge]) => {
             edge.classList.toggle('is-visible', show[side]);
@@ -5401,7 +5425,11 @@
                 updateFadeEdges(edges, scroller);
             });
         };
-        scrollTarget.addEventListener('scroll', update, { passive: true });
+        const updateNow = () => updateFadeEdges(edges, scroller);
+        scrollTarget.addEventListener('scroll', updateNow, { passive: true });
+        if (scrollTarget === window && window.visualViewport) {
+            window.visualViewport.addEventListener('resize', update);
+        }
         window.addEventListener('resize', update);
         new ResizeObserver(update).observe(scroller === document.scrollingElement ? document.body : scroller);
         new MutationObserver(update).observe(scroller === document.scrollingElement ? document.body : scroller, {
