@@ -5328,7 +5328,7 @@
         try {
             const nextVer = await backend.broadcast(note);
             localSystemVersion = Math.max(localSystemVersion || 0, nextVer);
-            showToast(`v${nextVer} 업데이트 알림이 모든 참가자 화면에 발송되었습니다!`, 'buy');
+            showToast(`v${getAppVersion()} 업데이트 알림이 모든 참가자 화면에 발송되었습니다!`, 'buy');
             window.closeBroadcastModal();
         } catch (err) {
             showToast(describeError(err), 'error');
