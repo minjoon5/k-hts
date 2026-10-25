@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.2.4">
+    <meta name="app-version" content="1.2.5">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -3911,22 +3911,9 @@
     function renderTradeView() {
         if (currentScreen !== 'TRADE') return;
         const st = stocks[selectedStockId];
-       const fullCandles = getFullTimeframeCandles(st, selectedTimeframe);
-       const maxPan = Math.max(0, fullCandles.length - CHART_CANDLES);
-       if (chartPanOffset > maxPan) chartPanOffset = maxPan;
-       if (chartPanOffset < 0) chartPanOffset = 0;
-       const endIdx = fullCandles.length - chartPanOffset;
-       const startOffset = Math.max(0, endIdx - CHART_CANDLES);
-       const candles = fullCandles.slice(startOffset, endIdx);
-       const jumpBtn = document.getElementById('chartJumpLatestBtn');
-       const topResetBtn = document.getElementById('chartPanResetTopBtn');
-       if (jumpBtn) {
-           jumpBtn.classList.toggle('hidden', chartPanOffset === 0);
-           jumpBtn.classList.toggle('flex', chartPanOffset > 0);
-       }
-       if (topResetBtn) {
-           topResetBtn.classList.toggle('hidden', chartPanOffset === 0);
-       }
+        const diff = st.price - st.basePrice;
+        const rate = (diff / st.basePrice) * 100;
+        const colorClass = colorFor(diff);
 
         document.getElementById('trCodeBadge').textContent = st.code;
         document.getElementById('trStockTitle').textContent = st.name;
@@ -3955,8 +3942,6 @@
         } else {
             evBadge.className = 'hidden';
         }
-
-        const pEl = document.getElementById('trCurrentPrice');
 
         const pEl = document.getElementById('trCurrentPrice');
         pEl.textContent = `${st.price.toLocaleString()}원`;
@@ -3999,8 +3984,21 @@
 
         const st = stocks[selectedStockId];
         const fullCandles = getFullTimeframeCandles(st, selectedTimeframe);
-        const candles = fullCandles.slice(-CHART_CANDLES);
-        const startOffset = fullCandles.length - candles.length;
+        const maxPan = Math.max(0, fullCandles.length - CHART_CANDLES);
+        if (chartPanOffset > maxPan) chartPanOffset = maxPan;
+        if (chartPanOffset < 0) chartPanOffset = 0;
+        const endIdx = fullCandles.length - chartPanOffset;
+        const startOffset = Math.max(0, endIdx - CHART_CANDLES);
+        const candles = fullCandles.slice(startOffset, endIdx);
+        const jumpBtn = document.getElementById('chartJumpLatestBtn');
+        const topResetBtn = document.getElementById('chartPanResetTopBtn');
+        if (jumpBtn) {
+            jumpBtn.classList.toggle('hidden', chartPanOffset === 0);
+            jumpBtn.classList.toggle('flex', chartPanOffset > 0);
+        }
+        if (topResetBtn) {
+            topResetBtn.classList.toggle('hidden', chartPanOffset === 0);
+        }
 
         const maSeries = {};
         const legendHtml = [];
@@ -4533,7 +4531,6 @@
             return 3173:                <div class="bg-[#0b0e14] border ${isActive ? 'border-amber-500/40' : 'border-slate-800'} rounded-xl p-3.5 space-y-1.5"> 3174:                    <div class="flex items-center justify-between gap-2 text-[11px]"> 3175:                        <span class="font-mono text-slate-400 font-bold">${formatStepToTime(item.step)} 발표 ${item.isChain ? '· 🔗 연쇄 후속보도' : ''}</span> 3176:                        ${isActive 3177:                            ? '<span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-extrabold">현재 주가 반영 중</span>' 3178:                            : '<span class="text-[10px] text-slate-500 font-semibold">영향 종료</span>'} 3179:                    </div> 3180:                    <div class="text-xs sm:text-sm font-bold text-white leading-snug">${item.event.headline}</div> 3181:                    <div class="flex flex-wrap gap-1.5 pt-1">${badges}</div> 3182:                </div> 3183:           ;
         }).join('');
     }
-
     window.openNewsModal = function() {
         const modal = document.getElementById('newsModal');
         modal.classList.remove('hidden');
