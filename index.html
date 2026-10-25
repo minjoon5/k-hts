@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.2.7">
+    <meta name="app-version" content="1.2.8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -1803,6 +1803,25 @@
             outline-offset: 2px;
         }
 
+        @media (max-width: 639px) {
+            table.whitespace-nowrap th,
+            table.whitespace-nowrap td {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+
+            .lb-table th:nth-child(4),
+            .lb-table td:nth-child(4),
+            .lb-table th:nth-child(5),
+            .lb-table td:nth-child(5) {
+                display: none;
+            }
+
+            .lb-table th:first-child {
+                width: auto;
+            }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .toggle-switch,
             .toggle-switch::after,
@@ -1986,7 +2005,7 @@
 
             <div class="scroll-fade" data-fade="x">
                 <div class="overflow-x-auto overscroll-x-contain" data-fade-scroller>
-                    <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
+                    <table class="lb-table w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
                         <thead>
                             <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
                                 <th class="py-2.5 px-3 font-bold w-16">순위</th>
