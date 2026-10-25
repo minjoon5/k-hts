@@ -3418,7 +3418,7 @@
         }
         if (version > localSystemVersion) {
             const banner = document.getElementById('updateBanner');
-            document.getElementById('newVerText').textContent = `v${version} - ${note || '최신 업데이트'}`;
+            document.getElementById('app-version').textContent = getAppVersion();
             banner.classList.remove('hidden');
             banner.classList.add('flex');
         }
