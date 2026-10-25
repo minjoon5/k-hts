@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.1.1">
+    <meta name="app-version" content="1.2.1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -1676,7 +1676,6 @@
             --bg: 7, 9, 14;
         }
 
-        /* 안쪽 스크롤 영역 끝에서 스크롤이 (스크롤되지 않는) 페이지로 넘어가지 않게 해 오버스크롤 효과가 그 영역에 나타나도록 합니다. */
         .overscroll-y-contain {
             overscroll-behavior-y: contain;
         }
@@ -1816,7 +1815,7 @@
 >
     <div class="flex items-center gap-2">
         <i class="fa-solid fa-rocket text-lg animate-bounce"></i>
-        <span>🚀 새로운 프로그램 버전(<span id="newVerText">v2</span>) 업데이트가 배포되었습니다! 최신 기능을 적용하려면 새로고침하세요.</span>
+        <span>🚀 새로운 프로그램 버전(<span id="app-version"></span>) 업데이트가 배포되었습니다! 최신 기능을 적용하려면 새로고침하세요.</span>
     </div>
     <button
         onclick="applySystemUpdate()"
@@ -1935,6 +1934,22 @@
     </div>
 </header>
 
+<div id="newsTickerBar" class="bg-[#0b0e14] border-b border-slate-800 px-4 py-1.5 flex items-center justify-between gap-3 text-xs shrink-0">
+    <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+        <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-extrabold text-[10px] shrink-0 flex items-center gap-1">
+            <i class="fa-solid fa-bolt"></i> 증시속보
+        </span>
+        <div id="newsTickerContent" onclick="openNewsModal()" class="truncate text-slate-300 font-semibold cursor-pointer hover:text-white transition">
+            실시간 증시 뉴스 및 기업 공시를 불러오는 중입니다...
+        </div>
+    </div>
+    <button onclick="openNewsModal()" class="shrink-0 text-[11px] text-blue-400 hover:underline font-bold flex items-center gap-1">
+        <span>뉴스룸 (<span id="activeEventCountBadge">0</span>)</span>
+        <i class="fa-solid fa-chevron-right text-[9px]"></i>
+    </button>
+</div>
+
+
 <div id="lobbyScreen" class="scroll-fade fade-bg-page flex-1 min-h-0 flex flex-col" data-fade="y">
     <main
         id="lobbyScroll"
@@ -2025,6 +2040,7 @@
                         class="text-xs bg-blue-950/80 text-blue-300 border border-blue-800/50 px-2 py-0.5 rounded-full"
                     >반도체·AI</span>
                     <span id="trLimitBadge" class="hidden text-xs font-extrabold px-2 py-0.5 rounded">상한가</span>
+                    <span id="trEventBadge" class="hidden text-xs font-extrabold px-2 py-0.5 rounded"></span>
                 </div>
                 <p id="trStockDesc" class="text-xs text-slate-400 mt-1">차세대 신경망 처리장치(NPU) 및 초고속 HBM 메모리 글로벌 리더</p>
             </div>
@@ -2578,9 +2594,31 @@
     </div>
 </div>
 
+<div
+    id="newsModal"
+    class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4"
+    onclick="if (event.target === this) closeNewsModal()"
+>
+    <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] p-6 shadow-2xl flex flex-col gap-4 overflow-hidden">
+        <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                <i class="fa-solid fa-newspaper text-amber-400"></i> K-HTS 실시간 증시 뉴스룸 & 모멘텀 현황
+            </h3>
+            <button onclick="closeNewsModal()" class="text-slate-400 hover:text-white" aria-label="닫기">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <p class="text-xs text-slate-400">
+            장중(06:00~24:00) 발생하는 거시경제·기업 뉴스와 연쇄(Chain) 이벤트가 각 종목의 상승·하락 확률 및 거래량에 실시간 반영됩니다.
+        </p>
+        <div class="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1" id="newsModalList"></div>
+    </div>
+</div>
+
 <div id="toastWrap" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
 
 <script type="module">
+    import { MARKET_EVENTS } from './asset/events.js';
     const FIREBASE_CONFIG = {
         apiKey: 'AIzaSyDt45EcO2VqfCqm0I3vH-akJYEuXAv1zLk',
         authDomain: 'k-hts-322c7.firebaseapp.com',
@@ -2594,7 +2632,7 @@
     const INITIAL_CASH = 50000000;
     const TIMEFRAMES = ['5m', '15m', '30m', '1d', '1w', '1M'];
     const LAUNCH_DATE = [2026, 10, 20];
-    const SIM_VERSION = 2;
+    const SIM_VERSION = 3;
     const KST_OFFSET_MS = 9 * 3600 * 1000;
     const DAY_MS = 86400000;
     const OPEN_SEC = 6 * 3600;
@@ -2602,7 +2640,6 @@
     const BUCKET_STEPS = 300;
     const CHART_CANDLES = 60;
     const EPOCH_DAY = Date.UTC(LAUNCH_DATE[0], LAUNCH_DATE[1] - 1, LAUNCH_DATE[2]) / DAY_MS;
-    // 분봉 차트에 보여 줄 최근 일수 (오늘 제외)
     const INTRADAY_DAYS = 7;
     const MAX_PENDING_ORDERS = 20;
     const MA_CONFIGS = [
@@ -2715,12 +2752,65 @@
         'unavailable': '서버에 연결할 수 없습니다. 네트워크를 확인해 주세요.'
     };
     const SILENT_AUTH_ERRORS = ['auth/popup-closed-by-user', 'auth/cancelled-popup-request', 'auth/user-cancelled'];
-    // 관리자 이메일 → 관리자 전용 닉네임. firestore.rules 의 adminNicknames() 와 같아야 합니다.
     const ADMIN_NICKNAMES = {
         'kimminjoon1205@gmail.com': 'master',
         '0104.smash@gmail.com': 'admin'
     };
     const RESERVED_NICKNAMES = Object.values(ADMIN_NICKNAMES);
+
+    const EVENT_MAP = Object.fromEntries(MARKET_EVENTS.map(e => [e.id, e]));
+    const ROOT_EVENTS = MARKET_EVENTS.filter(e => !e.isChainOnly);
+    const dailyScheduleCache = {};
+    let lastNotifiedEventKey = null;
+
+    function getDayEventSchedule(day) {
+        if (dailyScheduleCache[day]) return dailyScheduleCache[day];
+        const rng = createRng(hash3(day, 0x4e455753, SIM_VERSION));
+        const schedule = [];
+        let cursorStep = 60 + Math.floor(rng() * 300);
+        while (cursorStep < SESSION_STEPS - 600 && ROOT_EVENTS.length > 0) {
+            const ev = ROOT_EVENTS[Math.floor(rng() * ROOT_EVENTS.length)];
+            schedule.push({ step: cursorStep, event: ev, isChain: false });
+            if (ev.chains && ev.chains.length > 0) {
+                const roll = rng();
+                let accProb = 0;
+                for (const ch of ev.chains) {
+                    accProb += ch.prob;
+                    if (roll <= accProb && EVENT_MAP[ch.nextId]) {
+                        const followStep = cursorStep + ch.delaySec;
+                        if (followStep < SESSION_STEPS) {
+                            schedule.push({ step: followStep, event: EVENT_MAP[ch.nextId], isChain: true });
+                        }
+                        break;
+                    }
+                }
+            }
+            cursorStep += 900 + Math.floor(rng() * 1500);
+        }
+        schedule.sort((a, b) => a.step - b.step);
+        dailyScheduleCache[day] = schedule;
+        return schedule;
+    }
+
+    function getStockEffectAtStep(stockId, day, step) {
+        const schedule = getDayEventSchedule(day);
+        let bias = 0;
+        let volMult = 1;
+        for (let i = 0; i < schedule.length; i++) {
+            const item = schedule[i];
+            if (item.step > step) break;
+            for (const ef of item.event.effects) {
+                if ((ef.target === 'ALL' || ef.target === stockId) && step < item.step + ef.duration) {
+                    bias += ef.bias;
+                    volMult = Math.max(volMult, ef.volMult || 1);
+                }
+            }
+        }
+        return {
+            bias: Math.max(-0.22, Math.min(0.22, bias)),
+            volMult
+        };
+    }
 
     function getTickSize(price) {
         if (price < 2000) return 1;
@@ -2799,6 +2889,7 @@
 
     function createSession(idx, limits, day, open) {
         return {
+            stockId: COMPANY_META[idx].id,
             day,
             rng: createRng(hash3(idx + 1, day, SIM_VERSION)),
             // 거래량은 가격 난수열을 건드리지 않도록 별도 해시로 만듭니다.
@@ -2817,20 +2908,24 @@
         while (s.steps < target) {
             const before = s.price;
             const r = s.rng();
+            const eff = getStockEffectAtStep(s.stockId, s.day, s.steps);
             let p = before;
             if (s.lockedLimit === 'UPPER') {
                 p = s.limits.upper;
             } else if (s.lockedLimit === 'LOWER') {
                 p = s.limits.lower;
             } else {
-                if (r < 0.35) p = nextUp(before);
-                else if (r < 0.70) p = nextDown(before);
+                const upProb = Math.max(0.05, Math.min(0.65, 0.35 + eff.bias));
+                const downProb = Math.max(0.05, Math.min(0.65, 0.35 - eff.bias));
+                if (r < upProb) p = nextUp(before);
+                else if (r < upProb + downProb) p = nextDown(before);
                 p = clampToLimits(p, s.limits);
                 if (p >= s.limits.upper) s.lockedLimit = 'UPPER';
                 else if (p <= s.limits.lower) s.lockedLimit = 'LOWER';
             }
 
-            const stepVol = (s.lockedLimit ? 1 : (hash3(s.volSeed, s.steps, 1) % 18) + 2) * (p !== before ? 3 : 1);
+            const baseVol = (s.lockedLimit ? 1 : (hash3(s.volSeed, s.steps, 1) % 18) + 2) * (p !== before ? 3 : 1);
+            const stepVol = Math.round(baseVol * eff.volMult);
 
             if (track) {
                 const bi = Math.floor(s.steps / BUCKET_STEPS);
@@ -3674,9 +3769,9 @@
     }
 
     const RANK_STYLES = {
-        1: ['px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-xs', '🥇'],
-        2: ['px-2 py-0.5 rounded bg-slate-300 text-slate-950 font-extrabold text-xs', '🥈'],
-        3: ['px-2 py-0.5 rounded bg-amber-700 text-white font-extrabold text-xs', '🥉']
+ ['px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-xs', '🥇'],
+ ['px-2 py-0.5 rounded bg-slate-300 text-slate-950 font-extrabold text-xs', '🥈'],
+ ['px-2 py-0.5 rounded bg-amber-700 text-white font-extrabold text-xs', '🥉']
     };
 
     function renderLeaderboard() {
@@ -3795,8 +3890,18 @@
                 tagEl.className = 'text-[10px] bg-blue-600 text-white font-black px-1.5 py-0.5 rounded';
                 tagEl.textContent = '하한가';
             } else {
-                tagEl.className = 'hidden';
-                tagEl.textContent = '';
+                const curStep = stepsElapsed(Date.now());
+                const eff = getStockEffectAtStep(st.id, marketDay, curStep);
+                if (eff.bias > 0.01) {
+                    tagEl.className = 'text-[10px] bg-red-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.5 rounded font-bold';
+                    tagEl.textContent = '🔥 호재 모멘텀';
+                } else if (eff.bias < -0.01) {
+                    tagEl.className = 'text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.5 rounded font-bold';
+                    tagEl.textContent = '💧 악재 주의';
+                } else {
+                    tagEl.className = 'hidden';
+                    tagEl.textContent = '';
+                }
             }
         });
     }
@@ -3823,6 +3928,20 @@
         } else {
             limitBadge.className = 'hidden';
         }
+
+        const evBadge = document.getElementById('trEventBadge');
+        const curEff = getStockEffectAtStep(st.id, marketDay, stepsElapsed(Date.now()));
+        if (curEff.bias > 0.01) {
+            evBadge.className = 'text-xs font-extrabold px-2 py-0.5 rounded bg-red-500/20 text-rose-300 border border-rose-500/40';
+            evBadge.textContent = '🔥 뉴스 호재 작용 중';
+        } else if (curEff.bias < -0.01) {
+            evBadge.className = 'text-xs font-extrabold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40';
+            evBadge.textContent = '💧 뉴스 악재 작용 중';
+        } else {
+            evBadge.className = 'hidden';
+        }
+
+        const pEl = document.getElementById('trCurrentPrice');
 
         const pEl = document.getElementById('trCurrentPrice');
         pEl.textContent = `${st.price.toLocaleString()}원`;
@@ -4352,9 +4471,73 @@
         }
     }
 
+    function formatStepToTime(step) {
+        const totalSec = OPEN_SEC + step;
+        const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+        const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+        return ${hh}:${mm};
+    }
+
+    function renderNewsTickerAndModal() {
+        const nowStep = stepsElapsed(Date.now());
+        const schedule = getDayEventSchedule(marketDay);
+        const pastEvents = schedule.filter(item => item.step <= nowStep);
+        const activeEvents = pastEvents.filter(item =>
+            item.event.effects.some(ef => nowStep < item.step + ef.duration)
+        );
+
+        document.getElementById('activeEventCountBadge').textContent = activeEvents.length.toLocaleString();
+        const tickerEl = document.getElementById('newsTickerContent');
+
+        if (pastEvents.length === 0) {
+            tickerEl.textContent = '현재 발표된 장중 속보가 없습니다. (06:00 개장 이후 실시간 뉴스가 중계됩니다)';
+        } else {
+            const latest = pastEvents[pastEvents.length - 1];
+            const timeStr = formatStepToTime(latest.step);
+            tickerEl.textContent = [${timeStr}] ${latest.event.headline};
+            const eventKey = ${marketDay}_${latest.step}_${latest.event.id};
+            if (lastNotifiedEventKey !== null && lastNotifiedEventKey !== eventKey && nowStep - latest.step <= 5) {
+                showToast(📰 ${latest.event.headline}, 'info');
+            }
+            lastNotifiedEventKey = eventKey;
+        }
+
+        const modal = document.getElementById('newsModal');
+        if (!modal || modal.classList.contains('hidden')) return;
+        const listEl = document.getElementById('newsModalList');
+        if (pastEvents.length === 0) {
+            listEl.innerHTML = '<div class="py-8 text-center text-xs text-slate-500">아직 오늘 발표된 증시 뉴스가 없습니다.</div>';
+            return;
+        }
+        listEl.innerHTML = pastEvents.slice().reverse().map(item => {
+            const isActive = item.event.effects.some(ef => nowStep < item.step + ef.duration);
+            const badges = item.event.effects.map(ef => {
+                const targetName = ef.target === 'ALL' ? '전체 시장' : (stocks[ef.target] ? stocks[ef.target].name : ef.target);
+                const isUp = ef.bias > 0;
+                const cls = isUp ? 'bg-red-500/20 text-rose-300 border-rose-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+                return <span class="px-1.5 py-0.5 rounded border text-[10px] font-bold ${cls}">${targetName} ${isUp ? '호재 ▲' : '악재 ▼'}</span>;
+            }).join(' ');
+            return 3173:                <div class="bg-[#0b0e14] border ${isActive ? 'border-amber-500/40' : 'border-slate-800'} rounded-xl p-3.5 space-y-1.5"> 3174:                    <div class="flex items-center justify-between gap-2 text-[11px]"> 3175:                        <span class="font-mono text-slate-400 font-bold">${formatStepToTime(item.step)} 발표 ${item.isChain ? '· 🔗 연쇄 후속보도' : ''}</span> 3176:                        ${isActive 3177:                            ? '<span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-extrabold">현재 주가 반영 중</span>' 3178:                            : '<span class="text-[10px] text-slate-500 font-semibold">영향 종료</span>'} 3179:                    </div> 3180:                    <div class="text-xs sm:text-sm font-bold text-white leading-snug">${item.event.headline}</div> 3181:                    <div class="flex flex-wrap gap-1.5 pt-1">${badges}</div> 3182:                </div> 3183:           ;
+        }).join('');
+    }
+
+    window.openNewsModal = function() {
+        const modal = document.getElementById('newsModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        renderNewsTickerAndModal();
+    };
+
+    window.closeNewsModal = function() {
+        const modal = document.getElementById('newsModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    };
+
     function refreshAllViews() {
         if (!stocks[selectedStockId]) return;
         renderNavbarAccount();
+        renderNewsTickerAndModal();
         if (currentScreen === 'LOBBY') {
             renderLeaderboard();
             renderCompanyGrid();
