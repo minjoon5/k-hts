@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.2.12">
+    <meta name="app-version" content="1.2.13">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -1693,8 +1693,9 @@
             overflow: hidden;
         }
 
-        .rubber-band {
-            will-change: transform;
+        #lobbyScroll,
+        #tradeScroll {
+            overscroll-behavior-y: contain;
         }
 
         #tradeScroll {
@@ -5475,60 +5476,11 @@
             watchScroller(scroller, edges, scroller);
         });
 
-        ['lobbyScroll', 'tradeScroll'].forEach(id => setupRubberBand(document.getElementById(id)));
-
         const pageEdges = {
             top: createFadeEdge(document.body, 'top', 'page-fade'),
             bottom: createFadeEdge(document.body, 'bottom', 'page-fade')
         };
         watchScroller(document.scrollingElement, pageEdges, window);
-    }
-
-    function setupRubberBand(scroller) {
-        const MAX_PULL = 140;
-        const RESISTANCE = 0.4;
-        let startY = 0;
-        let offset = 0;
-        let tracking = false;
-
-        const setOffset = value => {
-            offset = value;
-            scroller.style.transform = value ? `translate3d(0, ${value}px, 0)` : '';
-        };
-
-        const release = () => {
-            if (!tracking && !offset) return;
-            tracking = false;
-            scroller.style.transition = 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)';
-            setOffset(0);
-        };
-
-        scroller.classList.add('rubber-band');
-        scroller.addEventListener('touchstart', e => {
-            if (e.touches.length !== 1) return;
-            scroller.style.transition = 'none';
-            startY = e.touches[0].clientY;
-            tracking = true;
-        }, { passive: true });
-
-        scroller.addEventListener('touchmove', e => {
-            if (!tracking || e.touches.length !== 1) return;
-            const y = e.touches[0].clientY;
-            const dy = y - startY;
-            const atTop = scroller.scrollTop <= 0;
-            const atBottom = Math.ceil(scroller.scrollTop + scroller.clientHeight) >= scroller.scrollHeight - 1;
-            if ((atTop && dy > 0) || (atBottom && dy < 0)) {
-                if (e.cancelable) e.preventDefault();
-                const pull = Math.min(Math.abs(dy) * RESISTANCE, MAX_PULL);
-                setOffset(dy > 0 ? pull : -pull);
-            } else {
-                startY = y;
-                if (offset) setOffset(0);
-            }
-        }, { passive: false });
-
-        scroller.addEventListener('touchend', release, { passive: true });
-        scroller.addEventListener('touchcancel', release, { passive: true });
     }
 
     let deferredInstallPrompt = null;
