@@ -2316,11 +2316,14 @@
                     </span>
                     <button onclick="openMyAssetModal()" class="text-[11px] text-blue-400 hover:underline">내 재산 상세</button>
                 </div>
-                <div
-                    id="tradePendingList"
-                    class="bg-[#0b0e14] border border-slate-800 rounded-xl p-2 max-h-36 overflow-y-auto divide-y divide-slate-800/60 text-[11px]"
-                >
-                    <div class="py-2 text-center text-slate-500">대기 중인 주문이 없습니다.</div>
+                <div class="scroll-fade fade-bg-page rounded-xl overflow-hidden" data-fade="y">
+                    <div
+                        id="tradePendingList"
+                        data-fade-scroller
+                        class="bg-[#0b0e14] border border-slate-800 rounded-xl p-2 max-h-36 overflow-y-auto overscroll-y-contain divide-y divide-slate-800/60 text-[11px]"
+                    >
+                        <div class="py-2 text-center text-slate-500">대기 중인 주문이 없습니다.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2525,7 +2528,8 @@
     class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4"
     onclick="if (event.target === this) closeMyAssetModal()"
 >
-    <div class="bg-[#131722] border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] p-6 shadow-2xl flex flex-col gap-4 overflow-y-auto">
+    <div class="scroll-fade bg-[#131722] border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden" data-fade="y">
+      <div data-fade-scroller class="p-6 flex flex-col gap-4 min-h-0 overflow-y-auto overscroll-y-contain">
         <div class="flex items-center justify-between">
             <h3 class="text-base font-extrabold text-white flex items-center gap-2">
                 <i class="fa-solid fa-wallet text-blue-400"></i> <span id="myAssetTitle">내 재산</span>
@@ -2566,7 +2570,7 @@
             <h4 class="text-xs font-extrabold text-white">
                 <i class="fa-solid fa-layer-group text-blue-400 mr-1"></i>보유 주식 포트폴리오 상세
             </h4>
-            <div class="overflow-x-auto border border-slate-800 rounded-xl">
+            <div class="scroll-fade rounded-xl" data-fade="x"><div class="overflow-x-auto overscroll-x-contain border border-slate-800 rounded-xl" data-fade-scroller>
                 <table class="w-full text-left border-collapse whitespace-nowrap text-xs">
                     <thead>
                         <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
@@ -2580,13 +2584,13 @@
                     </thead>
                     <tbody id="myHoldingsTableBody" class="divide-y divide-slate-800/60"></tbody>
                 </table>
-            </div>
+            </div></div>
         </div>
         <div class="space-y-1.5">
             <h4 class="text-xs font-extrabold text-white">
                 <i class="fa-solid fa-clock text-amber-400 mr-1"></i>미체결 지정가 · 예약 주문 관리
             </h4>
-            <div class="overflow-x-auto border border-slate-800 rounded-xl">
+            <div class="scroll-fade rounded-xl" data-fade="x"><div class="overflow-x-auto overscroll-x-contain border border-slate-800 rounded-xl" data-fade-scroller>
                 <table class="w-full text-left border-collapse whitespace-nowrap text-xs">
                     <thead>
                         <tr class="bg-[#0b0e14] text-slate-400 border-b border-slate-800">
@@ -2599,9 +2603,10 @@
                     </thead>
                     <tbody id="myPendingModalBody" class="divide-y divide-slate-800/60"></tbody>
                 </table>
-            </div>
+            </div></div>
         </div>
         <p class="text-[11px] text-slate-500 text-center">현재가 기준으로 실시간 갱신됩니다 · 초기자금 5,000만 원 · 지정가·예약 주문은 접속 중일 때 체결됩니다</p>
+      </div>
     </div>
 </div>
 
@@ -2622,7 +2627,9 @@
         <p class="text-xs text-slate-400">
             장중(06:00~24:00) 발생하는 거시경제·기업 뉴스와 연쇄(Chain) 이벤트가 각 종목의 상승·하락 확률 및 거래량에 실시간 반영됩니다.
         </p>
-        <div class="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-1" id="newsModalList"></div>
+        <div class="scroll-fade flex-1 min-h-0 flex flex-col" data-fade="y">
+            <div class="flex-1 min-h-0 overflow-y-auto overscroll-y-contain space-y-2.5 pr-1" id="newsModalList" data-fade-scroller></div>
+        </div>
     </div>
 </div>
 
