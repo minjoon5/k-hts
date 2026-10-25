@@ -1,15 +1,4 @@
-// Version 1.0.1
-
-// K-HTS 패밀리 리그 - 실시간 뉴스 및 연쇄(Chain) 이벤트 데이터베이스 (총 100개)
-// target: 'ALL'(전 종목) 또는 기업 ID('A'~'J')
-// A: 에이아이반도체, B: 번개배터리, C: 튼튼셀바이오, D: 드림모빌리티, E: 에브리톡
-// F: 퓨처로보틱스, G: 글로벌스타엔터, H: 헤라클레스방산, I: 이노그린에너지, J: 제일금융지주
-// bias: 틱당 상승확률 가중치 (-0.18 ~ +0.18), volMult: 거래량 증폭 배수, duration: 지속 시간(초)
-
 export const MARKET_EVENTS = [
-    // =========================================================================
-    // 1. 거시경제 및 단기 시장 전체 충격 이벤트 (EVT_001 ~ EVT_020: 20개)
-    // =========================================================================
     {
         id: 'EVT_001',
         type: 'MACRO',
@@ -213,9 +202,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // =========================================================================
-    // 2. 기업·섹터 간 나비효과 연쇄 이벤트 (EVT_021 ~ EVT_050: 15쌍 = 30개)
-    // =========================================================================
     {
         id: 'EVT_021',
         type: 'CHAIN_START',
@@ -544,11 +530,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // =========================================================================
-    // 3. 10대 기업별 장기 분기 스토리라인 이벤트 (EVT_051 ~ EVT_080: 10기업 × 3단계 = 30개)
-    //    (1단계 기대감 발생 ➔ 일정 시간 후 60% 확률 대성공 / 40% 확률 실패·악재 반전)
-    // =========================================================================
-    // [A. 에이아이반도체]
     {
         id: 'EVT_051',
         type: 'STORY_START',
@@ -582,7 +563,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [B. 번개배터리]
     {
         id: 'EVT_054',
         type: 'STORY_START',
@@ -616,7 +596,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [C. 튼튼셀바이오]
     {
         id: 'EVT_057',
         type: 'STORY_START',
@@ -650,7 +629,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [D. 드림모빌리티]
     {
         id: 'EVT_060',
         type: 'STORY_START',
@@ -684,7 +662,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [E. 에브리톡]
     {
         id: 'EVT_063',
         type: 'STORY_START',
@@ -718,7 +695,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [F. 퓨처로보틱스]
     {
         id: 'EVT_066',
         type: 'STORY_START',
@@ -752,7 +728,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [G. 글로벌스타엔터]
     {
         id: 'EVT_069',
         type: 'STORY_START',
@@ -786,7 +761,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [H. 헤라클레스방산]
     {
         id: 'EVT_072',
         type: 'STORY_START',
@@ -820,7 +794,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [I. 이노그린에너지]
     {
         id: 'EVT_075',
         type: 'STORY_START',
@@ -854,7 +827,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // [J. 제일금융지주]
     {
         id: 'EVT_078',
         type: 'STORY_START',
@@ -888,9 +860,6 @@ export const MARKET_EVENTS = [
         chains: []
     },
 
-    // =========================================================================
-    // 4. 10대 기업별 단발성 핵심 호재/악재 공시 (EVT_081 ~ EVT_100: 10기업 × 2개 = 20개)
-    // =========================================================================
     {
         id: 'EVT_081',
         type: 'COMPANY_SINGLE',
