@@ -2,7 +2,7 @@
 <html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.2.2">
+    <meta name="app-version" content="1.2.3">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-HTS 패밀리 리그</title>
     <meta name="description" content="실시간 시세로 모의 주식 거래를 하고 참가자들과 수익률 순위를 겨루는 모의주식 리그">
@@ -2138,12 +2138,24 @@
                 <button onclick="undoLastDrawing()" class="px-2 py-0.5 rounded border border-slate-700 text-slate-300 hover:bg-slate-800 font-bold">실행취소</button>
                 <button onclick="clearDrawings()" class="px-2 py-0.5 rounded border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 font-bold">전체삭제</button>
             </div>
-            <span id="drawToolHint" class="text-[11px] text-amber-400 font-semibold">도구를 선택해 차트 위에 보조선·추세선을 그리세요</span>
-        </div>
-
-        <div id="chartContainer" class="relative flex-1 min-h-[320px] bg-[#0b0e14] w-full overflow-hidden">
-            <canvas id="stockCandleCanvas" class="absolute inset-0 w-full h-full block"></canvas>
-        </div>
+            <div class="flex items-center gap-1.5 ml-auto">
+               <span id="drawToolHint" class="text-[11px] text-amber-400 font-semibold mr-1">도구를 선택해 차트 위에 보조선·추세선을 그리세요</span>
+               <button onclick="panChartBy(15)" class="px-2 py-0.5 rounded border border-slate-700 text-slate-300 hover:bg-slate-800 font-bold" title="과거 캔들로 이동">◀ 과거</button>
+               <button onclick="panChartBy(-15)" class="px-2 py-0.5 rounded border border-slate-700 text-slate-300 hover:bg-slate-800 font-bold" title="최근 캔들로 이동">이후 ▶</button>
+               <button onclick="resetChartPan()" id="chartPanResetTopBtn" class="hidden px-2 py-0.5 rounded border border-blue-500/60 bg-blue-950/80 text-blue-300 hover:bg-blue-600 hover:text-white font-bold">최신</button>
+           </div>
+       </div>
+       <div id="chartContainer" class="relative flex-1 min-h-[320px] bg-[#0b0e14] w-full overflow-hidden">
+           <canvas id="stockCandleCanvas" class="absolute inset-0 w-full h-full block"></canvas>
+           <button
+               id="chartJumpLatestBtn"
+               onclick="resetChartPan()"
+               class="hidden absolute bottom-3 right-20 z-10 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold px-3 py-1.5 rounded-full shadow-lg items-center gap-1 transition"
+           >
+               <span>최신봉으로</span>
+               <i class="fa-solid fa-forward-step"></i>
+           </button>
+       </div>
     </section>
 
     <section
@@ -3003,9 +3015,13 @@
         return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     })();
     let currentDrawTool = 'NONE';
-    let draftStartPt = null;
-    let hoverChartPt = null;
-    let lastChartMetrics = null;
+   let draftStartPt = null;
+   let hoverChartPt = null;
+   let lastChartMetrics = null;
+   let chartPanOffset = 0;
+   let isPanningChart = false;
+   let panStartX = 0;
+   let panStartOffset = 0;
 
     let localSystemVersion = null;
     let ownBroadcastVersion = null;
@@ -3894,9 +3910,22 @@
     function renderTradeView() {
         if (currentScreen !== 'TRADE') return;
         const st = stocks[selectedStockId];
-        const diff = st.price - st.basePrice;
-        const rate = (diff / st.basePrice) * 100;
-        const colorClass = colorFor(diff);
+       const fullCandles = getFullTimeframeCandles(st, selectedTimeframe);
+       const maxPan = Math.max(0, fullCandles.length - CHART_CANDLES);
+       if (chartPanOffset > maxPan) chartPanOffset = maxPan;
+       if (chartPanOffset < 0) chartPanOffset = 0;
+       const endIdx = fullCandles.length - chartPanOffset;
+       const startOffset = Math.max(0, endIdx - CHART_CANDLES);
+       const candles = fullCandles.slice(startOffset, endIdx);
+       const jumpBtn = document.getElementById('chartJumpLatestBtn');
+       const topResetBtn = document.getElementById('chartPanResetTopBtn');
+       if (jumpBtn) {
+           jumpBtn.classList.toggle('hidden', chartPanOffset === 0);
+           jumpBtn.classList.toggle('flex', chartPanOffset > 0);
+       }
+       if (topResetBtn) {
+           topResetBtn.classList.toggle('hidden', chartPanOffset === 0);
+       }
 
         document.getElementById('trCodeBadge').textContent = st.code;
         document.getElementById('trStockTitle').textContent = st.name;
@@ -4093,8 +4122,12 @@
         const stepW = plotW / slots;
         const bodyW = Math.max(3, Math.min(16, stepW * 0.65));
         const baseIdx = getTimeframeBaseIndex(st, selectedTimeframe) + startOffset;
-        lastChartMetrics = { padLeft, padTop, plotW, plotH, minP, maxP, stepW, baseIdx };
-
+       lastChartMetrics = { padLeft, padTop, plotW, plotH, minP, maxP, stepW, baseIdx, totalCandles: fullCandles.length };
+       if (chartPanOffset > 0) {
+           ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
+           ctx.font = "bold 11px 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+           ctx.fillText(◀ 과거 차트 탐색 중 (-${chartPanOffset}봉) · 마우스 드래그 또는 휠로 이동, padLeft + 6, padTop + 14);
+       }
         if (bbSeries && bbSeries.length > 1) {
             ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
             ctx.beginPath();
@@ -4546,16 +4579,18 @@
     };
 
     window.openCompanyTrade = function(stockId) {
-        selectedStockId = stockId;
-        draftStartPt = null;
-        document.getElementById('inputOrderPrice').value = stocks[stockId].price;
-        document.getElementById('inputOrderQty').value = 1;
-        window.switchScreen('TRADE');
-    };
+       selectedStockId = stockId;
+       draftStartPt = null;
+       chartPanOffset = 0;
+       document.getElementById('inputOrderPrice').value = stocks[stockId].price;
+       document.getElementById('inputOrderQty').value = 1;
+       window.switchScreen('TRADE');
+   };
 
     window.selectTimeframe = function(tf) {
         selectedTimeframe = tf;
         draftStartPt = null;
+        chartPanOffset = 0;
         renderDrawToolButtons();
         TIMEFRAMES.forEach(item => {
             const btn = document.getElementById(`tfBtn_${item}`);
@@ -4568,6 +4603,19 @@
         drawCandleChart();
     };
 
+    window.panChartBy = function(deltaBars) {
+       const st = stocks[selectedStockId];
+       if (!st) return;
+       const full = getFullTimeframeCandles(st, selectedTimeframe);
+       const maxPan = Math.max(0, full.length - CHART_CANDLES);
+       chartPanOffset = Math.max(0, Math.min(maxPan, chartPanOffset + deltaBars));
+       drawCandleChart();
+   };
+   window.resetChartPan = function() {
+       chartPanOffset = 0;
+       drawCandleChart();
+   };
+    
     window.setOrderPriceFromBook = function(price) {
         document.getElementById('inputOrderPrice').value = price;
         window.calcOrderTotal();
@@ -5094,9 +5142,11 @@
             btn.style.color = on ? '#fbbf24' : '#94a3b8';
             btn.style.backgroundColor = on ? 'rgba(251, 191, 36, 0.12)' : 'transparent';
         });
-        document.getElementById('stockCandleCanvas').style.touchAction = currentDrawTool === 'NONE' ? '' : 'none';
-        const msgs = {
-            NONE: '도구를 선택해 차트 위에 보조선·추세선을 그리세요',
+        const canvasEl = document.getElementById('stockCandleCanvas');
+       canvasEl.style.touchAction = currentDrawTool === 'NONE' ? 'pan-y' : 'none';
+       canvasEl.style.cursor = currentDrawTool === 'NONE' ? 'grab' : 'crosshair';
+       const msgs = {
+           NONE: '차트를 좌우로 드래그·휠 스크롤해 과거 봉을 보거나 작도 도구를 선택하세요',
             TREND: draftStartPt ? '종점(두 번째 점)을 클릭하세요' : '추세선 시작점(첫 번째 점)을 클릭하세요',
             RAY: draftStartPt ? '반직선이 뻗어나갈 방향 점을 클릭하세요' : '반직선 시작점을 클릭하세요',
             HLINE: '차트에서 수평선(가격 보조선)을 그을 위치를 클릭하세요',
@@ -5141,19 +5191,49 @@
     }
 
     function setupChartDrawingEvents() {
-        const canvas = document.getElementById('stockCandleCanvas');
-        canvas.addEventListener('pointermove', e => {
-            if (currentDrawTool === 'NONE') return;
-            hoverChartPt = getChartPointFromEvent(e);
-            drawCandleChart();
-        });
-        canvas.addEventListener('pointerleave', () => {
-            hoverChartPt = null;
-            if (currentDrawTool !== 'NONE') drawCandleChart();
-        });
-        canvas.addEventListener('pointerdown', e => {
-            if (currentDrawTool === 'NONE') return;
-            const pt = getChartPointFromEvent(e);
+       const canvas = document.getElementById('stockCandleCanvas');
+       canvas.addEventListener('wheel', e => {
+           if (!lastChartMetrics) return;
+           e.preventDefault();
+           const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+           const step = delta > 0 ? -4 : 4;
+           window.panChartBy(step);
+       }, { passive: false });
+       canvas.addEventListener('pointermove', e => {
+           if (isPanningChart && lastChartMetrics) {
+               const dx = e.clientX - panStartX;
+               const barShift = Math.round(dx / lastChartMetrics.stepW);
+               const maxPan = Math.max(0, lastChartMetrics.totalCandles - CHART_CANDLES);
+               chartPanOffset = Math.max(0, Math.min(maxPan, panStartOffset + barShift));
+               drawCandleChart();
+               return;
+           }
+           if (currentDrawTool === 'NONE') return;
+           hoverChartPt = getChartPointFromEvent(e);
+           drawCandleChart();
+       });
+       const stopPan = () => {
+           if (isPanningChart) {
+               isPanningChart = false;
+               canvas.style.cursor = currentDrawTool === 'NONE' ? 'grab' : 'crosshair';
+           }
+       };
+       canvas.addEventListener('pointerup', stopPan);
+       canvas.addEventListener('pointercancel', stopPan);
+       canvas.addEventListener('pointerleave', () => {
+           stopPan();
+           hoverChartPt = null;
+           if (currentDrawTool !== 'NONE') drawCandleChart();
+       });
+       canvas.addEventListener('pointerdown', e => {
+           if (currentDrawTool === 'NONE') {
+               isPanningChart = true;
+               panStartX = e.clientX;
+               panStartOffset = chartPanOffset;
+               canvas.style.cursor = 'grabbing';
+               return;
+           }
+           const pt = getChartPointFromEvent(e);
             if (!pt) return;
             e.preventDefault();
             const key = `${selectedStockId}_${selectedTimeframe}`;
